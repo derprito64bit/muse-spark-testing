@@ -1,0 +1,11 @@
+- generic [ref=e2]:
+    - link "Skip to content" [ref=e3] [cursor=pointer]:
+        - /url: '#main'
+    - banner [ref=e4]:
+        - navigation "Primary" [ref=e5]:
+            - link "Aether One X v2" [ref=e6] [cursor=pointer]:
+                - /url: /
+    - main [ref=e7]:
+        - status [ref=e8]: Loading…
+    - contentinfo [ref=e9]:
+        - paragraph [ref=e10]: Aether One X is a fictional concept product. All specifications, benchmarks, and prices shown are illustrative demonstration values.

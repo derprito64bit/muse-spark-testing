@@ -1,6 +1,9 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Link, Route, Routes } from 'react-router'
+import { BrowserRouter, Route, Routes } from 'react-router'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary.tsx'
+import { ScrollManager } from './components/ScrollManager.tsx'
+import { Footer } from './components/layout/Footer.tsx'
+import { Navbar } from './components/layout/Navbar.tsx'
 
 const HomePage = lazy(() => import('./pages/HomePage.tsx').then((m) => ({ default: m.HomePage })))
 const CamerasPage = lazy(() =>
@@ -29,11 +32,8 @@ export function App() {
       >
         Skip to content
       </a>
-      <header>
-        <nav aria-label="Primary">
-          <Link to="/">Aether One X v2</Link>
-        </nav>
-      </header>
+      <ScrollManager />
+      <Navbar />
       <main id="main">
         <Suspense fallback={<p role="status">Loading…</p>}>
           <Routes>
@@ -88,12 +88,7 @@ export function App() {
           </Routes>
         </Suspense>
       </main>
-      <footer>
-        <p>
-          Aether One X is a fictional concept product. All specifications, benchmarks, and prices
-          shown are illustrative demonstration values.
-        </p>
-      </footer>
+      <Footer />
     </BrowserRouter>
   )
 }
