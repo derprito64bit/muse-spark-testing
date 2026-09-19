@@ -67,6 +67,7 @@ export function Film() {
         className="mx-auto max-w-6xl px-4 py-16"
         data-testid="film-fallback"
       >
+        <h1 className="sr-only">Aether One X: power, without the noise.</h1>
         {CHAPTERS.map((chapter) => (
           <article
             key={chapter.act}
@@ -102,6 +103,7 @@ export function Film() {
       style={{ height: 'var(--film-height)' }}
       data-testid="film-runway"
     >
+      <h1 className="sr-only">Aether One X: power, without the noise.</h1>
       <div className="sticky top-0 h-screen w-full overflow-hidden supports-[height:100svh]:h-[100svh]">
         <Suspense
           fallback={

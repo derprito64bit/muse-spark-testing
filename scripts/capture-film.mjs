@@ -5,14 +5,27 @@ import { chromium } from '@playwright/test'
 // Bounded M5 evidence run: 13 act screenshots plus a full-runway scroll FPS
 // sample. Desktop 1280x800, DPR 1. Writes docs/film-snaps/act-<id>.png.
 const ACTS = [
-  ['arrival', 0.05], ['settle', 0.13], ['approach', 0.2], ['xray', 0.29],
-  ['chip', 0.42], ['rebuild', 0.5], ['camera', 0.66], ['display', 0.78],
-  ['storage', 0.86], ['battery', 0.91], ['software', 0.94], ['ai', 0.96],
+  ['arrival', 0.05],
+  ['settle', 0.13],
+  ['approach', 0.2],
+  ['xray', 0.29],
+  ['chip', 0.42],
+  ['rebuild', 0.5],
+  ['camera', 0.66],
+  ['display', 0.78],
+  ['storage', 0.86],
+  ['battery', 0.91],
+  ['software', 0.94],
+  ['ai', 0.96],
   ['final', 0.99],
 ]
 
 mkdirSync('docs/film-snaps', { recursive: true })
-const server = spawn('cmd', ['/c', 'node_modules\\.bin\\vite preview --port 4176 --strictPort --host 127.0.0.1'], { stdio: 'ignore' })
+const server = spawn(
+  'cmd',
+  ['/c', 'node_modules\\.bin\\vite preview --port 4176 --strictPort --host 127.0.0.1'],
+  { stdio: 'ignore' },
+)
 await new Promise((resolve) => setTimeout(resolve, 3500))
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 })
@@ -51,7 +64,9 @@ const fps = await page.evaluate(
       requestAnimationFrame(tick)
     }),
 )
-console.log(`scroll fps: ${(fps.frames / fps.seconds).toFixed(1)} avg, worst frame ${fps.worstMs.toFixed(1)}ms (SwiftShader CPU GL)`)
+console.log(
+  `scroll fps: ${(fps.frames / fps.seconds).toFixed(1)} avg, worst frame ${fps.worstMs.toFixed(1)}ms (SwiftShader CPU GL)`,
+)
 console.log(`console errors: ${errors.length}`)
 for (const e of errors.slice(0, 10)) console.log('  ERR', e)
 await browser.close()

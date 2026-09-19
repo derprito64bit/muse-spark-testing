@@ -1,6 +1,4 @@
 import { Head } from '../components/head/Head.tsx'
-import { CtaBand } from '../components/layout/CtaBand.tsx'
-import { PageHero } from '../components/layout/PageHero.tsx'
 import { Film } from '../film/Film.tsx'
 import { Scrubber } from '../film/Scrubber.tsx'
 
@@ -13,11 +11,6 @@ export function HomePage() {
         description="A fictional flagship. Scroll-driven 3D film, honest specs, no third-party requests."
         path="/"
       />
-      <PageHero
-        kicker="Aether One X"
-        title="Power, without the noise."
-        lede="A fictional flagship presented as one continuous scroll-driven film. All specs are illustrative demonstration values."
-      />
       <Film />
       <section
         id="buy"
@@ -28,7 +21,6 @@ export function HomePage() {
         <h2 className="spec-num mt-3 text-4xl md:text-6xl">Make it yours.</h2>
         <p className="mt-3 text-(--color-dim)">The full configurator deck lands in M7.</p>
       </section>
-      <CtaBand />
       {import.meta.env.DEV ? <Scrubber /> : null}
     </>
   )
