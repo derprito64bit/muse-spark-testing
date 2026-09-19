@@ -1,11 +1,10 @@
 import { Head } from '../components/head/Head.tsx'
 import { CtaBand } from '../components/layout/CtaBand.tsx'
 import { PageHero } from '../components/layout/PageHero.tsx'
-import { PhoneViewer } from '../components/PhoneViewer/PhoneViewer.tsx'
-import { Reveal } from '../components/ui/Reveal.tsx'
+import { Film } from '../film/Film.tsx'
 import { Scrubber } from '../film/Scrubber.tsx'
 
-/** Home route. The film lands here in M4/M5; M3 owns the static 3D studies. */
+/** Home route: the product film plus the closing configurator deck. */
 export function HomePage() {
   return (
     <>
@@ -19,23 +18,15 @@ export function HomePage() {
         title="Power, without the noise."
         lede="A fictional flagship presented as one continuous scroll-driven film. All specs are illustrative demonstration values."
       />
-      <section aria-label="Front study" className="mx-auto max-w-6xl px-4">
-        <Reveal>
-          <PhoneViewer pose="hero" label="Aether One X three-quarter front view" />
-        </Reveal>
-      </section>
-      <section aria-label="Rear study" className="mx-auto max-w-6xl px-4">
-        <Reveal>
-          <PhoneViewer pose="rear" label="Aether One X rear camera view" />
-        </Reveal>
-      </section>
-      <section aria-label="Aether One X film" className="mx-auto max-w-6xl px-4 py-16">
-        <Reveal>
-          <h2 className="spec-num text-3xl">The film arrives in M4.</h2>
-          <p className="mt-2 text-(--color-dim)">
-            Thirteen acts, one camera shot, zero third-party requests.
-          </p>
-        </Reveal>
+      <Film />
+      <section
+        id="buy"
+        aria-label="Configure your Aether One X"
+        className="mx-auto max-w-6xl px-4 py-16"
+      >
+        <p className="kicker">Configure</p>
+        <h2 className="spec-num mt-3 text-4xl md:text-6xl">Make it yours.</h2>
+        <p className="mt-3 text-(--color-dim)">The full configurator deck lands in M7.</p>
       </section>
       <CtaBand />
       {import.meta.env.DEV ? <Scrubber /> : null}

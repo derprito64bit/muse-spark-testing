@@ -108,6 +108,17 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
+/* Act hero numeral: compact on small screens, large on desktop. */
+.spec-num--stat {
+  font-size: clamp(56px, 18vw, 96px);
+}
+
+@media (min-width: 768px) {
+  .spec-num--stat {
+    font-size: clamp(88px, 17vw, 168px);
+  }
+}
+
 .spec-tech {
   font-family: var(--font-mono);
   font-size: 10px;

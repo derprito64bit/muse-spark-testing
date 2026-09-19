@@ -32,7 +32,7 @@ function SceneDisposer() {
 }
 
 /** Adaptive quality: scales DPR from measured frame time, never per frame. */
-function AdaptiveDpr({ cap }: { cap: number }) {
+export function AdaptiveDpr({ cap }: { cap: number }) {
   const gl = useThree((state) => state.gl)
   const [dpr, setDpr] = useState(Math.min(window.devicePixelRatio || 1, cap))
   useFrame((_, delta) => {
