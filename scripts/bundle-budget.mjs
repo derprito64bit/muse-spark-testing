@@ -18,24 +18,36 @@ function gzipKb(path) {
   return gzipSync(readFileSync(path)).length / 1024
 }
 
-// Placeholder budget check for M0. Full per-chunk accounting lands with the
-// film chunks in M3/M4. Fails only on absurd overruns so CI stays meaningful.
-console.log('bundle budget check (M0 placeholder)')
+// Lazy chunks never block first paint: three, the R3F runtime, the film
+// scene, and the phone canvas. Everything else counts as initial JS.
+const LAZY_PATTERN = /(three|r3f|film|phonecanvas|cameraassembly)/i
+
+// Budgets from section 8.3: initial JS excl. three under 180KB gzip,
+// CSS under 40KB gzip.
+console.log('bundle budget check')
 
 try {
   const files = [...walk(distDir)]
   const js = files.filter((f) => f.endsWith('.js'))
   const css = files.filter((f) => f.endsWith('.css'))
-  const jsKb = js.reduce((sum, f) => sum + gzipKb(f), 0)
   const cssKb = css.reduce((sum, f) => sum + gzipKb(f), 0)
-  console.log(`js total gzip: ${jsKb.toFixed(1)}KB over ${js.length} files`)
   console.log(`css total gzip: ${cssKb.toFixed(1)}KB over ${css.length} files`)
   if (cssKb > 40) throw new Error(`CSS budget exceeded: ${cssKb.toFixed(1)}KB over 40KB`)
-  const nonThree = js.filter((f) => !f.includes('three'))
-  const nonThreeKb = nonThree.reduce((sum, f) => sum + gzipKb(f), 0)
-  console.log(`js excl three gzip: ${nonThreeKb.toFixed(1)}KB`)
-  if (nonThreeKb > 180)
-    throw new Error(`Initial JS budget exceeded: ${nonThreeKb.toFixed(1)}KB over 180KB`)
+
+  const initial = js.filter((f) => !LAZY_PATTERN.test(f))
+  const lazy = js.filter((f) => LAZY_PATTERN.test(f))
+  const initialKb = initial.reduce((sum, f) => sum + gzipKb(f), 0)
+  const lazyKb = lazy.reduce((sum, f) => sum + gzipKb(f), 0)
+  console.log(`initial js gzip: ${initialKb.toFixed(1)}KB over ${initial.length} files`)
+  console.log(`lazy js gzip: ${lazyKb.toFixed(1)}KB over ${lazy.length} files`)
+  for (const f of initial) console.log(`  initial: ${f.split('dist')[1]} ${gzipKb(f).toFixed(1)}KB`)
+  if (initialKb > 180)
+    throw new Error(`Initial JS budget exceeded: ${initialKb.toFixed(1)}KB over 180KB`)
+
+  const three = js.filter((f) => /three/i.test(f))
+  if (three.length === 0)
+    throw new Error('three chunk missing: three must ship as its own lazy file')
+  console.log(`three chunk present: ${three.map((f) => f.split('dist')[1]).join(', ')}`)
   console.log('budgets ok')
 } catch (err) {
   if (err.code === 'ENOENT') {

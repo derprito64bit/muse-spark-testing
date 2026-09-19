@@ -5,12 +5,13 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id: string) {
-          if (id.includes('node_modules/three')) return 'three'
-          if (id.includes('node_modules/@react-three')) return 'r3f'
-          return undefined
+        advancedChunks: {
+          groups: [
+            { name: 'three', test: /node_modules[\\/]three[\\/]/ },
+            { name: 'r3f', test: /node_modules[\\/]@react-three[\\/]/ },
+          ],
         },
       },
     },
