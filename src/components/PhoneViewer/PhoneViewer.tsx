@@ -30,6 +30,8 @@ interface PhoneViewerProps {
   label: string
   /** Reserve vertical space so canvas mount never shifts layout. */
   className?: string
+  /** Join an ancestor PhoneConfigProvider instead of minting local state. */
+  sharedConfig?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ export function PhoneViewer({
   finish = 'obsidian',
   label,
   className,
+  sharedConfig = false,
 }: PhoneViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   const [nearViewport, setNearViewport] = useState(
@@ -112,6 +115,7 @@ export function PhoneViewer({
               pose={pose}
               label={label}
               dprCap={dprCap}
+              sharedConfig={sharedConfig}
               onContextLost={() => setContextLost(true)}
             />
           </div>

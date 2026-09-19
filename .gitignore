@@ -4,3 +4,4 @@ playwright-report/
 test-results/
 reference/
 .playwright-mcp/
+*.log

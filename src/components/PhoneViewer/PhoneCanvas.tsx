@@ -57,32 +57,44 @@ interface PhoneCanvasProps {
   pose: PhonePoseId
   label: string
   dprCap: number
+  /** Skip the internal provider when an ancestor already provides config. */
+  sharedConfig?: boolean
   onCreated?: (gl: THREE.WebGLRenderer) => void
   onContextLost?: () => void
 }
 
 /** The live WebGL canvas. Split into its own chunk so three never blocks first paint. */
-export function PhoneCanvas({ pose, label, dprCap, onCreated, onContextLost }: PhoneCanvasProps) {
+export function PhoneCanvas({
+  pose,
+  label,
+  dprCap,
+  sharedConfig = false,
+  onCreated,
+  onContextLost,
+}: PhoneCanvasProps) {
+  const scene = (
+    <>
+      <AdaptiveDpr cap={dprCap} />
+      <PhoneScene pose={pose} label={label} />
+      <SceneDisposer />
+    </>
+  )
   return (
-    <PhoneConfigProvider>
-      <Canvas
-        dpr={Math.min(window.devicePixelRatio || 1, dprCap)}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        camera={{ fov: 24, near: 0.01, far: 10, position: [0, 0.01, 0.62] }}
-        onCreated={({ gl }) => {
-          onCreated?.(gl)
-          const canvas = gl.domElement
-          const handleLost = (event: Event) => {
-            event.preventDefault()
-            onContextLost?.()
-          }
-          canvas.addEventListener('webglcontextlost', handleLost, false)
-        }}
-      >
-        <AdaptiveDpr cap={dprCap} />
-        <PhoneScene pose={pose} label={label} />
-        <SceneDisposer />
-      </Canvas>
-    </PhoneConfigProvider>
+    <Canvas
+      dpr={Math.min(window.devicePixelRatio || 1, dprCap)}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      camera={{ fov: 24, near: 0.01, far: 10, position: [0, 0.01, 0.62] }}
+      onCreated={({ gl }) => {
+        onCreated?.(gl)
+        const canvas = gl.domElement
+        const handleLost = (event: Event) => {
+          event.preventDefault()
+          onContextLost?.()
+        }
+        canvas.addEventListener('webglcontextlost', handleLost, false)
+      }}
+    >
+      {sharedConfig ? scene : <PhoneConfigProvider>{scene}</PhoneConfigProvider>}
+    </Canvas>
   )
 }

@@ -124,7 +124,9 @@
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  /* Faint token (5.47:1 on night) so technical labels clear 4.5:1 on every
+     surface. Never dimmer: axe judges the steady state, not intent. */
+  color: var(--color-faint);
 }
 
 .kicker {

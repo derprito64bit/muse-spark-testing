@@ -37,7 +37,7 @@ test('zoom modules scrub with zero layout shift', async ({ page }) => {
   await page.goto('http://127.0.0.1:5174/dev/zoom')
   // Wait for the lazy route chunk first: observing before it lands would
   // attribute chunk pop-in to the zoom modules.
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page.getByTestId('zoom-pinned-box')).toBeVisible()
   // Isolate zoom from font-swap shift: observe only after fonts settle.
   await page.evaluate(() => document.fonts.ready)
   // Neutralize smooth-scroll animation: programmatic stepped scrolling would
