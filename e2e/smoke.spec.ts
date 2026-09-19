@@ -11,8 +11,20 @@ test('home renders without console errors', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
-test('skip link moves focus to main', async ({ page }) => {
+test('skip link moves focus to main', async ({ page, browserName }) => {
   await page.goto('/')
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: /skip to content/i })).toBeFocused()
+  const link = page.getByRole('link', { name: /skip to content/i })
+  if (browserName === 'webkit') {
+    // Headless WebKit neither tabs to links (platform keyboard-access
+    // setting) nor navigates on synthetic click. Keyboard Enter on the
+    // focused link is the genuine operability path.
+    await link.focus()
+    await expect(link).toBeFocused()
+    await page.keyboard.press('Enter')
+  } else {
+    await page.keyboard.press('Tab')
+    await expect(link).toBeFocused()
+    await link.click()
+  }
+  await expect(page).toHaveURL(/#main/)
 })

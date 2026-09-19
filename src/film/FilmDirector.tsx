@@ -3,12 +3,14 @@ import type { MotionValue } from 'motion/react'
 import { useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { centerBias, fitFov, macroFloorFov } from './framing.ts'
+import { SHOTS } from './shots.ts'
 import { STAGE_LIGHTING } from './lighting.ts'
 import { clearInspectPointer, setInspectPointer, tickInspect } from './inspect.ts'
 import type { ScreenMode } from './LiveScreen.tsx'
-import { computeFilmStates } from './states.ts'
+import { computeFilmStates, ramplike } from './states.ts'
 import { actAt } from './timeline.ts'
 import { sampleFilm } from './sample.ts'
+import { dollyZoomFov } from '../zoom/zoom.ts'
 import type { PhoneMaterialSet } from '../components/PhoneViewer/phoneMaterials.ts'
 import type { InternalsControl } from './internals/Internals.tsx'
 
@@ -52,6 +54,8 @@ export interface FilmRefs {
   rimLight: MutableRefObject<THREE.DirectionalLight | null>
   screenMode: { current: ScreenMode }
   screenBrightness: { current: number }
+  parallaxX: MotionValue<number>
+  parallaxY: MotionValue<number>
 }
 
 interface FilmDirectorProps {
@@ -92,9 +96,15 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const cam = state.camera as THREE.PerspectiveCamera
     cam.position.copy(t.pos)
     s.look.copy(t.target)
+    // Pointer parallax: small clamped offset, cancelled under reduced motion.
+    if (!reduced) {
+      s.look.x += THREE.MathUtils.clamp(refs.parallaxX.get(), -0.5, 0.5) * 0.016
+      s.look.y += THREE.MathUtils.clamp(refs.parallaxY.get(), -0.5, 0.5) * 0.012
+    }
     cam.lookAt(s.look)
 
-    const damp = reduced ? 1 : 1 - Math.exp(-delta * 7)
+    const shot = SHOTS[act] ?? SHOTS.arrival
+    const damp = reduced ? 1 : 1 - Math.exp(-delta * shot.dampPerSecond)
     const aspect = state.size.width / Math.max(1, state.size.height)
     const bx = centerBias(aspect, 'x')
     const by = centerBias(aspect, 'y')
@@ -139,6 +149,15 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     if (aspect < 0.8) {
       const floor = macroFloorFov(p, distance, aspect)
       if (floor > targetFov) targetFov = floor
+    }
+    // Vertigo once, at the chip entry: widen the lens while the camera
+    // pushes in so the die holds size and the background warps. Used once;
+    // twice would be a gimmick.
+    if (!reduced) {
+      const w = ramplike(p, 0.33, 0.335, 0.355, 0.365)
+      if (w > 0) {
+        targetFov += (dollyZoomFov(targetFov, w * 0.12, distance) - targetFov) * w
+      }
     }
     if (reduced) {
       if (Math.abs(cam.fov - targetFov) > 0.001) {

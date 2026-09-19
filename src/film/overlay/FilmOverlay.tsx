@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, type MotionValue } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { Glass } from '../../components/Glass/Glass.tsx'
 import { CHAPTERS } from '../chapters.ts'
 import { inspectHit } from '../inspect.ts'
 import { ACTS } from '../timeline.ts'
@@ -72,7 +73,9 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
 
       {readout !== null ? (
         <div className="absolute left-1/2 top-24 -translate-x-1/2">
-          <XrayReadout readout={readout} />
+          <Glass variant="tooltip" label="Inspected part">
+            <XrayReadout readout={readout} />
+          </Glass>
         </div>
       ) : null}
 

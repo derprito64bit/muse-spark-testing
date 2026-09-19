@@ -137,7 +137,7 @@
 
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(24px) scale(0.99);
   transition:
     opacity 0.8s var(--ease-out-expo),
     transform 0.8s var(--ease-out-expo);

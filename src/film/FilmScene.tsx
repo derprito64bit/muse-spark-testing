@@ -16,6 +16,8 @@ import type { MotionValue } from 'motion/react'
 
 interface FilmSceneProps {
   progress: MotionValue<number>
+  parallaxX: MotionValue<number>
+  parallaxY: MotionValue<number>
   label: string
 }
 
@@ -25,7 +27,7 @@ interface FilmSceneProps {
  * every ref the director writes. Explicit color: ACES Filmic tone mapping
  * on the Canvas, sRGB-authored colors converted once at creation.
  */
-export function FilmScene({ progress, label }: FilmSceneProps) {
+export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmSceneProps) {
   const materials = useMemo<PhoneMaterialSet>(
     () => createPhoneMaterials(FINISH_PARAMS.obsidian),
     [],
@@ -89,8 +91,10 @@ export function FilmScene({ progress, label }: FilmSceneProps) {
       rimLight,
       screenMode: screen.modeRef,
       screenBrightness: screen.brightnessRef,
+      parallaxX,
+      parallaxY,
     }),
-    [screen.modeRef, screen.brightnessRef],
+    [screen.modeRef, screen.brightnessRef, parallaxX, parallaxY],
   )
 
   return (

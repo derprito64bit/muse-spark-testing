@@ -1,4 +1,4 @@
-import { useScroll, type MotionValue } from 'motion/react'
+import { useMotionValue, useScroll, type MotionValue } from 'motion/react'
 import { Suspense, lazy, useEffect, useRef, useState, type RefObject } from 'react'
 import { PhoneFrame } from '../components/Phone/PhoneFrame.tsx'
 import { CHAPTERS } from './chapters.ts'
@@ -41,7 +41,10 @@ function useRunwayProgress(runway: RefObject<HTMLElement | null>): MotionValue<n
  */
 export function Film() {
   const runway = useRef<HTMLElement>(null)
+  const stage = useRef<HTMLDivElement>(null)
   const progress = useRunwayProgress(runway)
+  const parallaxX = useMotionValue(0)
+  const parallaxY = useMotionValue(0)
   const [canRender] = useState(() => {
     try {
       return !new URLSearchParams(window.location.search).has('nogl') && webglAvailable()
@@ -51,6 +54,27 @@ export function Film() {
   })
   const [contextLost, setContextLost] = useState(false)
   const showFallback = !canRender || contextLost
+
+  // Pointer parallax for fine pointers only. MotionValues, never state.
+  useEffect(() => {
+    const el = stage.current
+    if (el === null || !window.matchMedia('(pointer: fine)').matches) return
+    const onMove = (event: PointerEvent) => {
+      const rect = el.getBoundingClientRect()
+      parallaxX.set(((event.clientX - rect.left) / Math.max(1, rect.width) - 0.5) * 2)
+      parallaxY.set(((event.clientY - rect.top) / Math.max(1, rect.height) - 0.5) * 2)
+    }
+    const onLeave = () => {
+      parallaxX.set(0)
+      parallaxY.set(0)
+    }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    return () => {
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerleave', onLeave)
+    }
+  }, [parallaxX, parallaxY])
 
   // ?t=0.42 deep link: jump the runway to that progress on mount.
   useEffect(() => {
@@ -104,7 +128,10 @@ export function Film() {
       data-testid="film-runway"
     >
       <h1 className="sr-only">Aether One X: power, without the noise.</h1>
-      <div className="sticky top-0 h-screen w-full overflow-hidden supports-[height:100svh]:h-[100svh]">
+      <div
+        ref={stage}
+        className="sticky top-0 h-screen w-full overflow-hidden supports-[height:100svh]:h-[100svh]"
+      >
         <Suspense
           fallback={
             <div className="flex h-full items-center justify-center" role="status">
@@ -112,7 +139,12 @@ export function Film() {
             </div>
           }
         >
-          <FilmCanvasLazy progress={progress} onContextLost={() => setContextLost(true)} />
+          <FilmCanvasLazy
+            progress={progress}
+            parallaxX={parallaxX}
+            parallaxY={parallaxY}
+            onContextLost={() => setContextLost(true)}
+          />
         </Suspense>
         <FilmOverlay progress={progress} />
       </div>

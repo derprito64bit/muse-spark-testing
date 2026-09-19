@@ -21,6 +21,9 @@ const SoftwarePage = lazy(() =>
 const SpecificationsPage = lazy(() =>
   import('./pages/SpecificationsPage.tsx').then((m) => ({ default: m.SpecificationsPage })),
 )
+const DevZoomPage = lazy(() =>
+  import('./pages/DevZoomPage.tsx').then((m) => ({ default: m.DevZoomPage })),
+)
 
 /** Root application shell with lazy routes and per-route error boundaries. */
 export function App() {
@@ -85,6 +88,16 @@ export function App() {
                 </RouteErrorBoundary>
               }
             />
+            {import.meta.env.DEV ? (
+              <Route
+                path="/dev/zoom"
+                element={
+                  <RouteErrorBoundary routeName="DevZoom">
+                    <DevZoomPage />
+                  </RouteErrorBoundary>
+                }
+              />
+            ) : null}
           </Routes>
         </Suspense>
       </main>

@@ -6,6 +6,8 @@ import type { MotionValue } from 'motion/react'
 
 interface FilmCanvasProps {
   progress: MotionValue<number>
+  parallaxX: MotionValue<number>
+  parallaxY: MotionValue<number>
   onContextLost: () => void
 }
 
@@ -13,7 +15,7 @@ interface FilmCanvasProps {
  * Film WebGL canvas. Own lazy chunk with three. Explicit color pipeline:
  * sRGB-authored colors, ACES Filmic tone mapping, per-act exposure.
  */
-export function FilmCanvas({ progress, onContextLost }: FilmCanvasProps) {
+export function FilmCanvas({ progress, parallaxX, parallaxY, onContextLost }: FilmCanvasProps) {
   return (
     <Canvas
       dpr={Math.min(window.devicePixelRatio || 1, 1.75)}
@@ -34,7 +36,12 @@ export function FilmCanvas({ progress, onContextLost }: FilmCanvasProps) {
     >
       <color attach="background" args={['#0a0a0c']} />
       <AdaptiveDpr cap={1.75} />
-      <FilmScene progress={progress} label="Aether One X product film" />
+      <FilmScene
+        progress={progress}
+        parallaxX={parallaxX}
+        parallaxY={parallaxY}
+        label="Aether One X product film"
+      />
     </Canvas>
   )
 }
