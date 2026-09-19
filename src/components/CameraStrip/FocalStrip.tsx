@@ -13,7 +13,7 @@ const FOCAL_TO_LENS: Record<string, FocusLensId> = {
  * Focal-length strip. Selecting a length re-focuses the matching 3D lens
  * through shared phone config; 2x notes the sensor crop, 10x the hybrid.
  */
-export function FocalStrip() {
+export function FocalStrip({ onZoom }: { onZoom?: (zoom: string) => void }) {
   const { focusLens, setFocusLens } = usePhoneConfig()
   return (
     <section aria-label="Focal lengths" className="mx-auto max-w-6xl px-4 py-12">
@@ -27,6 +27,7 @@ export function FocalStrip() {
               onClick={() => {
                 const lens = FOCAL_TO_LENS[f.zoom]
                 if (lens !== undefined) setFocusLens(lens)
+                onZoom?.(f.zoom)
               }}
               aria-pressed={active}
               data-testid={`focal-${f.zoom}`}
