@@ -3,6 +3,7 @@ import { CtaBand } from '../components/layout/CtaBand.tsx'
 import { PageHero } from '../components/layout/PageHero.tsx'
 import { PhoneViewer } from '../components/PhoneViewer/PhoneViewer.tsx'
 import { Reveal } from '../components/ui/Reveal.tsx'
+import { Scrubber } from '../film/Scrubber.tsx'
 
 /** Home route. The film lands here in M4/M5; M3 owns the static 3D studies. */
 export function HomePage() {
@@ -37,6 +38,7 @@ export function HomePage() {
         </Reveal>
       </section>
       <CtaBand />
+      {import.meta.env.DEV ? <Scrubber /> : null}
     </>
   )
 }

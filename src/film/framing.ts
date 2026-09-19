@@ -1,0 +1,95 @@
+import { silhouetteHeightM, silhouetteWidthM } from '../components/PhoneViewer/phoneDimensions.ts'
+
+export interface FitOptions {
+  /** Target share of viewport height the phone should fill. */
+  fit: number
+  /** Camera distance eye to target in meters. */
+  distanceM: number
+  /** Viewport aspect width over height. */
+  aspect: number
+  /** Phone pose and scale at this sample. */
+  scale: number
+  rxRad: number
+  ryRad: number
+  /** Off-center world offset in meters folded into the width guard. */
+  pxM?: number
+  horizontalMargin?: number
+  minFovDeg?: number
+  maxFovDeg?: number
+}
+
+/**
+ * Monotone aspect-tier policy: the authored fit warms per format with no
+ * boundary jumps. 16:9 is the authored baseline.
+ */
+export function formatFit(aspect: number, fit: number): number {
+  const tiers: ReadonlyArray<{ aspect: number; tier: number }> = [
+    { aspect: 3.5, tier: 1.16 },
+    { aspect: 2.4, tier: 1.12 },
+    { aspect: 1.78, tier: 1.0 },
+    { aspect: 1.2, tier: 0.95 },
+    { aspect: 0.75, tier: 0.9 },
+  ]
+  for (let i = 0; i < tiers.length; i++) {
+    const lower = tiers[i]
+    if (lower === undefined) continue
+    if (aspect >= lower.aspect) {
+      if (i === 0) return fit * lower.tier
+      const upper = tiers[i - 1]
+      if (upper === undefined) return fit * lower.tier
+      const t = Math.min(1, Math.max(0, (aspect - lower.aspect) / (upper.aspect - lower.aspect)))
+      return fit * (lower.tier + (upper.tier - lower.tier) * t)
+    }
+  }
+  return fit * 0.82
+}
+
+/**
+ * Vertical FOV in degrees framing the phone to fit of the viewport while
+ * keeping the horizontal span inside the margin. Tighter axis wins.
+ */
+export function fitFov(options: FitOptions): number {
+  const { fit, distanceM, aspect, scale, rxRad, ryRad, minFovDeg = 10, maxFovDeg = 52 } = options
+  const horizontalMargin =
+    options.horizontalMargin ??
+    Math.min(0.86, Math.max(0.78, 0.86 - Math.max(0, aspect - 1.9) * 0.05))
+  const eh = silhouetteHeightM(scale, rxRad)
+  const ew = silhouetteWidthM(scale, ryRad)
+  const offsetSpan = Math.abs(options.pxM ?? 0)
+  const tanV = eh / (2 * distanceM * Math.max(formatFit(aspect, fit), 0.05))
+  const tanH = (ew * 0.5 + offsetSpan) / (distanceM * Math.max(aspect, 0.3) * horizontalMargin)
+  const fov = (2 * Math.atan(Math.max(tanV, tanH)) * 180) / Math.PI
+  return Math.min(maxFovDeg, Math.max(minFovDeg, fov))
+}
+
+/**
+ * Screen-space bias for off-center compositions. Clamps hard on narrow
+ * screens, gently emphasizes on ultrawide room.
+ */
+export function centerBias(aspect: number, axis: 'x' | 'y'): number {
+  const limit = axis === 'x' ? 1.5 : 1.1
+  const base = Math.min(1, Math.max(0.25, aspect / limit))
+  if (axis === 'x' && aspect > 1.9) {
+    const t = Math.min(1, (aspect - 1.9) / (3.5 - 1.9))
+    return base + (1.25 - base) * t
+  }
+  return base
+}
+
+const MACRO_REGIONS: ReadonlyArray<{ start: number; end: number; halfM: number }> = [
+  { start: 0.39, end: 0.47, halfM: 0.0125 },
+  { start: 0.62, end: 0.72, halfM: 0.036 },
+  { start: 0.895, end: 0.925, halfM: 0.017 },
+]
+
+/** Minimum vertical FOV keeping a macro subject framed on narrow viewports. */
+export function macroFloorFov(p: number, distanceM: number, aspect: number): number {
+  for (const region of MACRO_REGIONS) {
+    if (p >= region.start && p <= region.end) {
+      const denom = distanceM * Math.max(aspect, 0.35) * 0.8
+      if (denom <= 0) return 0
+      return Math.min(85, (2 * Math.atan(region.halfM / denom) * 180) / Math.PI)
+    }
+  }
+  return 0
+}

@@ -13,6 +13,8 @@ export default defineConfig({
   webServer: {
     command: 'cmd /c node_modules\\.bin\\vite preview --port 4173 --strictPort --host 127.0.0.1',
     port: 4173,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse: a stale preview of the previous dist causes nondeterministic
+    // failures. Always boot the current build. CI already behaves this way.
+    reuseExistingServer: false,
   },
 })
