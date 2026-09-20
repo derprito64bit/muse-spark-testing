@@ -1,4 +1,4 @@
-export type FinishId = 'obsidian' | 'titanium' | 'glacier'
+export type FinishId = 'obsidian' | 'titanium' | 'glacier' | 'ember' | 'slate'
 
 export interface Finish {
   id: FinishId
@@ -44,6 +44,24 @@ export const FINISHES: Finish[] = [
     image: '/images/finishes/glacier.svg',
     swatch: 'linear-gradient(145deg,#ffffff 0%,#d4deee 55%,#8fa6cc 100%)',
     frame: 'linear-gradient(160deg, rgba(255,255,255,0.75), rgba(255,255,255,0.2) 45%, #b9c6dc)',
+  },
+  {
+    id: 'ember',
+    name: 'Ember',
+    tagline: 'Warm bronze, anodised deep.',
+    description: 'A deep warm bronze over anodised aluminium. Catches low light like banked coals.',
+    image: '/images/finishes/ember.svg',
+    swatch: 'linear-gradient(145deg,#e8a06a 0%,#4a2e1a 55%,#241209 100%)',
+    frame: 'linear-gradient(160deg, rgba(255,220,180,0.4), rgba(255,220,180,0.08) 45%, #6a4a2e)',
+  },
+  {
+    id: 'slate',
+    name: 'Slate',
+    tagline: 'Micro-textured matte that grips.',
+    description: 'A fine-grained matte that reads grippy. The quietest finish in the range.',
+    image: '/images/finishes/slate.svg',
+    swatch: 'linear-gradient(145deg,#6a6e76 0%,#232529 55%,#101114 100%)',
+    frame: 'linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.04) 45%, #43464e)',
   },
 ]
 

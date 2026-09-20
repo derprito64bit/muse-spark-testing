@@ -41,4 +41,41 @@ describe('film states', () => {
     expect(mid).toBeGreaterThan(0)
     expect(mid).toBeLessThan(1)
   })
+
+  it('keeps every scalar inside [0,1] across the whole film', () => {
+    for (let i = 0; i <= 1000; i++) {
+      const s = computeFilmStates(i / 1000)
+      for (const [name, value] of Object.entries(s)) {
+        expect(value, `${name} at p=${i / 1000}`).toBeGreaterThanOrEqual(0)
+        expect(value, `${name} at p=${i / 1000}`).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('returns every scalar to 0 at the end except screenOn', () => {
+    const end = computeFilmStates(1)
+    for (const [name, value] of Object.entries(end)) {
+      if (name === 'screenOn') expect(value).toBeGreaterThan(0)
+      else expect(value, name).toBe(0)
+    }
+  })
+
+  it('opens the optics beat with the camera dive', () => {
+    expect(computeFilmStates(0.66).explodeOptics).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.55).explodeOptics).toBe(0)
+    expect(computeFilmStates(0.75).explodeOptics).toBe(0)
+  })
+
+  it('pulls focus and atmosphere at the macro holds', () => {
+    expect(computeFilmStates(0.435).focusPull).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.685).focusPull).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.685).macroAtmos).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.5).focusPull).toBe(0)
+  })
+
+  it('shows callouts only inside the exploded diagram', () => {
+    expect(computeFilmStates(0.4).calloutOpacity).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.2).calloutOpacity).toBe(0)
+    expect(computeFilmStates(0.6).calloutOpacity).toBe(0)
+  })
 })

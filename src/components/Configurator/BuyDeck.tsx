@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DEFAULT_STORAGE_GB, FINISHES, STORAGE_OPTIONS } from '../../data/product.ts'
 import { formatPrice } from '../../lib/format.ts'
 import { Glass } from '../Glass/Glass.tsx'
+import { FINISH_PARAMS } from '../PhoneViewer/phoneMaterials.ts'
 import { PhoneConfigProvider, usePhoneConfig } from '../PhoneViewer/PhoneConfig.tsx'
 import { PhoneViewer } from '../PhoneViewer/PhoneViewer.tsx'
 
@@ -23,10 +24,12 @@ function BuyDeckInner() {
   const option = STORAGE_OPTIONS.find((s) => s.gb === storageGb) ?? STORAGE_OPTIONS[1]
   const active = FINISHES.find((f) => f.id === finish) ?? FINISHES[0]
   if (option === undefined || active === undefined) return null
+  const accent = FINISH_PARAMS[finish]?.uiAccent ?? '#7fb4ff'
 
   return (
     <section
       id="buy"
+      tabIndex={-1}
       aria-label="Configure your Aether One X"
       className="mx-auto max-w-6xl px-4 py-16"
     >
@@ -50,14 +53,23 @@ function BuyDeckInner() {
                   title={`${f.name}: ${f.tagline}`}
                   data-testid={`finish-${f.id}`}
                   data-active={finish === f.id}
-                  className="h-12 w-12 rounded-full border-2 border-transparent data-[active=true]:border-(--color-aether-strong)"
-                  style={{ background: f.swatch }}
+                  className="h-12 w-12 rounded-full border-2 border-transparent"
+                  style={{
+                    background: f.swatch,
+                    borderColor: finish === f.id ? accent : 'transparent',
+                  }}
                 />
               ))}
             </div>
             <p className="mt-2 text-sm text-(--color-dim)" data-testid="finish-name">
               {active.name}: {active.tagline}
             </p>
+            <span
+              aria-hidden="true"
+              data-testid="finish-underline"
+              className="mt-1 block h-0.5 w-16 rounded-full"
+              style={{ background: accent }}
+            />
             <h3 className="spec-tech mt-6">Capacity</h3>
             <div role="group" aria-label="Choose a capacity" className="mt-2 flex flex-wrap gap-2">
               {STORAGE_OPTIONS.map((s) => (

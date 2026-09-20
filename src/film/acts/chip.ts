@@ -27,8 +27,24 @@ export const CHIP_KEYS: FilmKey[] = [
     lens: { fov: 22, fovMax: 48 },
     look: { exposure: 1.2, glass: 0.15 },
   }),
+  // Hold 0.432 to 0.440: camera locked, pose delta tiny. The die emissive
+  // and trace routing carry the motion instead (Prompt B section 5.1).
   key({
-    at: 0.445,
+    at: 0.432,
+    pose: { rx: -0.34, ry: 0.09, rz: 0.02, scale: 2.02, px: 0, py: 0.015 },
+    camera: { pos: [0.0375, 0.1535, 0.138], target: [0.0296, 0.1225, 0.022] },
+    lens: { fov: 22, fovMax: 48 },
+    look: { exposure: 1.2, glass: 0.15 },
+  }),
+  key({
+    at: 0.44,
+    pose: { rx: -0.335, ry: 0.09, rz: 0.02, scale: 2.02, px: 0, py: 0.015 },
+    camera: { pos: [0.0375, 0.1535, 0.138], target: [0.0296, 0.1225, 0.022] },
+    lens: { fov: 22, fovMax: 48 },
+    look: { exposure: 1.2, glass: 0.15 },
+  }),
+  key({
+    at: 0.452,
     pose: { rx: -0.26, ry: 0.05, rz: 0.02, scale: 2.02, px: 0, py: 0 },
     camera: { pos: [0.0345, 0.152, 0.148], target: [0.0292, 0.125, 0.0302] },
     lens: { fov: 21.5, fovMax: 48 },

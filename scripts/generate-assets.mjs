@@ -9,6 +9,8 @@ const finishes = {
   obsidian: ['#43464e', '#0b0b0e', '#26282f'],
   titanium: ['#ffffff', '#9ba0ab', '#3f424b'],
   glacier: ['#ffffff', '#d4deee', '#8fa6cc'],
+  ember: ['#e8a06a', '#4a2e1a', '#241209'],
+  slate: ['#6a6e76', '#232529', '#101114'],
 }
 for (const [id, [a, b, c]] of Object.entries(finishes)) {
   writeFileSync(

@@ -24,6 +24,9 @@ const SpecificationsPage = lazy(() =>
 const DevZoomPage = lazy(() =>
   import('./pages/DevZoomPage.tsx').then((m) => ({ default: m.DevZoomPage })),
 )
+const KitchenSinkPage = lazy(() =>
+  import('./pages/KitchenSinkPage.tsx').then((m) => ({ default: m.KitchenSinkPage })),
+)
 
 /** Root application shell with lazy routes and per-route error boundaries. */
 export function App() {
@@ -94,6 +97,16 @@ export function App() {
                 element={
                   <RouteErrorBoundary routeName="DevZoom">
                     <DevZoomPage />
+                  </RouteErrorBoundary>
+                }
+              />
+            ) : null}
+            {import.meta.env.DEV ? (
+              <Route
+                path="/dev/kitchen-sink"
+                element={
+                  <RouteErrorBoundary routeName="KitchenSink">
+                    <KitchenSinkPage />
                   </RouteErrorBoundary>
                 }
               />

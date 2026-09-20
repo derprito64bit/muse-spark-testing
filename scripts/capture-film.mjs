@@ -8,7 +8,7 @@ const ACTS = [
   ['arrival', 0.05],
   ['settle', 0.13],
   ['approach', 0.2],
-  ['xray', 0.29],
+  ['xray', 0.325],
   ['chip', 0.42],
   ['rebuild', 0.5],
   ['camera', 0.66],

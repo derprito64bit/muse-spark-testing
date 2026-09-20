@@ -83,8 +83,9 @@ export function PhoneViewer({
 
   const face = pose === 'rear' ? 'rear' : 'front'
   const showFallback = !canRender || contextLost
-  const dprCap =
-    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 1.3 : 1.75
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  const dprCap = coarse ? 1.3 : 1.75
+  const detail = coarse ? 'low' : 'high'
 
   return (
     <div
@@ -92,6 +93,8 @@ export function PhoneViewer({
       className={className ?? 'flex min-h-[420px] items-center justify-center md:min-h-[520px]'}
       data-testid="phone-viewer"
       data-fallback={showFallback ? 'true' : 'false'}
+      role="img"
+      aria-label={label}
     >
       {showFallback ? (
         <div className="flex flex-col items-center gap-3">
@@ -115,6 +118,7 @@ export function PhoneViewer({
               pose={pose}
               label={label}
               dprCap={dprCap}
+              detail={detail}
               sharedConfig={sharedConfig}
               onContextLost={() => setContextLost(true)}
             />

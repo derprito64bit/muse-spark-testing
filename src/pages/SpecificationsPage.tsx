@@ -1,4 +1,5 @@
 import { Head } from '../components/head/Head.tsx'
+import { ProductJsonLd } from '../components/head/ProductJsonLd.tsx'
 import { PageHero } from '../components/layout/PageHero.tsx'
 import { CONCEPT_NOTICE, SPEC_CATEGORIES } from '../data/product.ts'
 
@@ -12,6 +13,7 @@ export function SpecificationsPage() {
         path="/specifications"
         image="/og/specifications.svg"
       />
+      <ProductJsonLd />
       <PageHero
         kicker="Specifications"
         title="Nothing hidden."

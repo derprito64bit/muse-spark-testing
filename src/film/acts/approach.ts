@@ -18,9 +18,9 @@ export const APPROACH_KEYS: FilmKey[] = [
   }),
   key({
     at: 0.25,
-    pose: { rx: -0.08, ry: 0.72, rz: 0.02, scale: 1.26, px: -0.12, py: 0.05 },
-    camera: { pos: [0.2, 0.04, 0.66], target: [0, 0, 0] },
-    lens: { fov: 22, fit: 0.68 },
+    pose: { rx: 0.1, ry: 0.6, rz: 0.02, scale: 1.26, px: -0.1, py: -0.03 },
+    camera: { pos: [0.14, -0.1, 0.64], target: [0, -0.055, 0] },
+    lens: { fov: 24 },
     look: { exposure: 1 },
   }),
 ]

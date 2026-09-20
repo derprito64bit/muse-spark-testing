@@ -3,7 +3,7 @@ import type { MotionValue } from 'motion/react'
 import { useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { centerBias, fitFov, macroFloorFov } from './framing.ts'
-import { SHOTS } from './shots.ts'
+import { SHOTS, capAngularStep } from './shots.ts'
 import { STAGE_LIGHTING } from './lighting.ts'
 import { clearInspectPointer, setInspectPointer, tickInspect } from './inspect.ts'
 import type { ScreenMode } from './LiveScreen.tsx'
@@ -18,11 +18,17 @@ const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 
 /** Shell materials that dissolve together when the internals take over. */
 const SHELL_MATS = [
-  'frame',
+  'framePX',
+  'frameNX',
+  'framePY',
+  'frameNY',
+  'frameChamfer',
   'back',
   'island',
   'lensRing',
-  'lensGlass',
+  'lensGlassA',
+  'lensGlassB',
+  'lensGlassC',
   'lensBarrel',
   'lensCavity',
   'sensorGlint',
@@ -31,14 +37,32 @@ const SHELL_MATS = [
   'antenna',
   'simTray',
   'port',
+  'portTongue',
+  'portContact',
   'speaker',
   'button',
   'logo',
+  'regulatory',
+  'subpixel',
   'focusRing',
+  'rangeGlass',
 ] as const satisfies ReadonlyArray<keyof PhoneMaterialSet>
 
 /** Bezel and edge hardware dials out harder so it never paints over internals. */
-const FRAME_MATS = ['frame', 'button', 'simTray', 'port', 'speaker', 'antenna'] as const
+const FRAME_MATS = [
+  'framePX',
+  'frameNX',
+  'framePY',
+  'frameNY',
+  'frameChamfer',
+  'button',
+  'simTray',
+  'port',
+  'portTongue',
+  'portContact',
+  'speaker',
+  'antenna',
+] as const
 
 const XRAY_ACTS = new Set(['xray', 'rebuild'])
 
@@ -52,6 +76,8 @@ export interface FilmRefs {
   keyLight: MutableRefObject<THREE.DirectionalLight | null>
   fillLight: MutableRefObject<THREE.DirectionalLight | null>
   rimLight: MutableRefObject<THREE.DirectionalLight | null>
+  accentLight: MutableRefObject<THREE.DirectionalLight | null>
+  opticsSeparation: MutableRefObject<Record<string, THREE.Group | null>>
   screenMode: { current: ScreenMode }
   screenBrightness: { current: number }
   parallaxX: MotionValue<number>
@@ -72,10 +98,15 @@ interface FilmDirectorProps {
 export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
   const scratch = useRef({
     look: new THREE.Vector3(),
+    camPos: new THREE.Vector3(0, 0, 0.62),
+    camReady: false,
     env: 0.9,
     key: 2.2,
     fill: 0.7,
     rim: 1.1,
+    accent: 0,
+    tint: new THREE.Color('#ffffff'),
+    tintTarget: new THREE.Color('#ffffff'),
     prepared: false,
   })
 
@@ -93,18 +124,41 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const st = computeFilmStates(p)
     const act = actAt(p).id
 
-    const cam = state.camera as THREE.PerspectiveCamera
-    cam.position.copy(t.pos)
-    s.look.copy(t.target)
-    // Pointer parallax: small clamped offset, cancelled under reduced motion.
-    if (!reduced) {
-      s.look.x += THREE.MathUtils.clamp(refs.parallaxX.get(), -0.5, 0.5) * 0.016
-      s.look.y += THREE.MathUtils.clamp(refs.parallaxY.get(), -0.5, 0.5) * 0.012
-    }
-    cam.lookAt(s.look)
-
     const shot = SHOTS[act] ?? SHOTS.arrival
     const damp = reduced ? 1 : 1 - Math.exp(-delta * shot.dampPerSecond)
+    const lookDamp = reduced ? 1 : 1 - Math.exp(-delta * shot.targetDampPerSecond)
+    const capRot = (current: number, goal: number): number =>
+      reduced ? goal : capAngularStep(current, goal, shot.maxAngularVelocity, delta)
+
+    const cam = state.camera as THREE.PerspectiveCamera
+    // Position glides: a hard flick through a fast move (battery exit runs
+    // 0.2m in 0.006 of progress) travels instead of teleporting. Tracks
+    // smooth scroll invisibly at 7/s; snaps under reduced motion.
+    if (reduced || !s.camReady) {
+      s.camPos.copy(t.pos)
+      s.camReady = true
+      cam.position.copy(t.pos)
+    } else {
+      const pd = 1 - Math.exp(-delta * 7)
+      s.camPos.x += (t.pos.x - s.camPos.x) * pd
+      s.camPos.y += (t.pos.y - s.camPos.y) * pd
+      s.camPos.z += (t.pos.z - s.camPos.z) * pd
+      cam.position.copy(s.camPos)
+    }
+    // Aim settles late: damped slower than pose so the eye leads.
+    s.look.x += (t.target.x - s.look.x) * lookDamp
+    s.look.y += (t.target.y - s.look.y) * lookDamp
+    s.look.z += (t.target.z - s.look.z) * lookDamp
+    // Pointer parallax: small clamped offset applied at lookAt time, never
+    // stored, so it cannot accumulate inside the damped aim.
+    let lookX = s.look.x
+    let lookY = s.look.y
+    if (!reduced) {
+      lookX += THREE.MathUtils.clamp(refs.parallaxX.get(), -0.5, 0.5) * 0.016
+      lookY += THREE.MathUtils.clamp(refs.parallaxY.get(), -0.5, 0.5) * 0.012
+    }
+    cam.lookAt(lookX, lookY, s.look.z)
+
     const aspect = state.size.width / Math.max(1, state.size.height)
     const bx = centerBias(aspect, 'x')
     const by = centerBias(aspect, 'y')
@@ -118,15 +172,17 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
         g.scale.setScalar(t.scale)
         g.position.set(px, py, 0)
       } else {
-        g.rotation.x += (t.rx - g.rotation.x) * damp
-        g.rotation.y += (t.ry - g.rotation.y) * damp
-        g.rotation.z += (t.rz - g.rotation.z) * damp
+        // Damped toward the sampled pose, then capped: a hard flick gets a
+        // fast controlled move, never a whip (Prompt B section 7.2).
+        g.rotation.x = capRot(g.rotation.x, g.rotation.x + (t.rx - g.rotation.x) * damp)
+        g.rotation.y = capRot(g.rotation.y, g.rotation.y + (t.ry - g.rotation.y) * damp)
+        g.rotation.z = capRot(g.rotation.z, g.rotation.z + (t.rz - g.rotation.z) * damp)
         const ns = t.scale
         g.scale.x += (ns - g.scale.x) * damp
         g.scale.y += (ns - g.scale.y) * damp
         g.scale.z += (ns - g.scale.z) * damp
         g.position.x += (px - g.position.x) * damp
-        g.position.y += (py - g.position.y) * damp
+        g.position.y += (px - g.position.y) * damp
       }
     }
 
@@ -165,7 +221,8 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
         cam.updateProjectionMatrix()
       }
     } else if (Math.abs(cam.fov - targetFov) > 0.01) {
-      cam.fov += (targetFov - cam.fov) * (1 - Math.exp(-delta * 7))
+      const damped = cam.fov + (targetFov - cam.fov) * (1 - Math.exp(-delta * 7))
+      cam.fov = capAngularStep(cam.fov, damped, shot.maxFovVelocity, delta)
       cam.updateProjectionMatrix()
     }
 
@@ -211,6 +268,8 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     refs.screenBrightness.current = act === 'display' ? 0.85 : 0.6
     const dim = 1 - st.shellGhost * 0.75
     materials.display.emissiveIntensity = st.screenOn * dim * (act === 'display' ? 1.35 : 0.95)
+    // Macro atmosphere lifts the sensor shimmer at the holds.
+    materials.sensorGlint.emissiveIntensity = 1.4 + st.macroAtmos * 0.8
 
     // Lighting state damped per act.
     const light = STAGE_LIGHTING[act] ?? STAGE_LIGHTING.arrival
@@ -219,19 +278,58 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     s.fill += (light.fill - s.fill) * ld
     s.rim += (light.rim - s.rim) * ld
     s.env += (light.env - s.env) * ld
+    // Camera-act accent rakes the collar chamfer; elsewhere it rests at zero.
+    // Focus pulls borrow it briefly so the subject owns the light.
+    s.accent += ((act === 'camera' ? 1.6 : 0) + st.focusPull * 0.8 - s.accent) * ld
+    s.tint.lerp(s.tintTarget.set(light.envTint), ld)
     if (refs.keyLight.current !== null) refs.keyLight.current.intensity = s.key
     if (refs.fillLight.current !== null) refs.fillLight.current.intensity = s.fill
     if (refs.rimLight.current !== null) refs.rimLight.current.intensity = s.rim
-    for (const name of ['frame', 'back', 'island', 'flashRing'] as const) {
+    if (refs.accentLight.current !== null) {
+      refs.accentLight.current.intensity = s.accent
+      refs.accentLight.current.color.copy(s.tint)
+    }
+    for (const name of [
+      'framePX',
+      'frameNX',
+      'framePY',
+      'frameNY',
+      'frameChamfer',
+      'back',
+      'island',
+      'flashRing',
+    ] as const) {
       materials[name].envMapIntensity = s.env
     }
     state.gl.toneMappingExposure = t.exposure * light.exposure
+
+    // Optical separation: cover, collar, barrel, element, sensor open in
+    // sequence over the optics beat (Prompt B section 5.2). Outward is -z.
+    // Distances breathe the assembly open without floating parts into the
+    // macro view: the separated cover must never occlude the tunnel.
+    const layers = [
+      ['cover', 0, 0.0022],
+      ['collar', 0.15, 0.0018],
+      ['barrel', 0.3, 0.0012],
+      ['element', 0.45, 0.0007],
+      ['sensor', 0.6, 0.0003],
+    ] as const
+    const sep = st.explodeOptics
+    for (const lens of ['main', 'ultra', 'tele'] as const) {
+      for (const [layer, delay, distance] of layers) {
+        const g = refs.opticsSeparation.current[`${lens}:${layer}`]
+        if (g === null || g === undefined) continue
+        const t = Math.min(1, Math.max(0, (sep - delay) / (1 - delay)))
+        g.position.z = -distance * (t * t * (3 - 2 * t))
+      }
+    }
 
     // Internals control plane.
     const c = refs.internalsControl.current
     c.opacity = st.internalOpacity
     c.explode = st.explodeXray
     c.explodeBatt = st.explodeBatt
+    c.explodeRadial = st.explodeRadial
     c.chipFocus = st.chipFocus
     c.chipLift = st.chipLift
     c.battLift = st.battLift

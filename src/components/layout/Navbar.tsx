@@ -35,8 +35,19 @@ export function Navbar() {
               </li>
             ))}
           </ul>
-          <a href="/#buy" className="kicker ml-auto hidden sm:block">
-            Buy
+          <a
+            href="/#buy"
+            data-testid="skip-film"
+            className="kicker ml-auto hidden sm:block"
+            onClick={() => {
+              // Move focus with the jump so keyboard and screen-reader
+              // users land in the configurator, not just the viewport.
+              window.setTimeout(() => {
+                document.getElementById('buy')?.focus({ preventScroll: true })
+              }, 450)
+            }}
+          >
+            Skip film · Buy
           </a>
         </nav>
       </Glass>

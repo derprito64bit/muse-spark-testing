@@ -6,6 +6,7 @@ import { inspectHit } from '../inspect.ts'
 import { ACTS } from '../timeline.ts'
 import { useChapter } from '../useChapter.ts'
 import { BigNumeral } from './BigNumeral.tsx'
+import { Callouts } from './Callouts.tsx'
 import { Headline } from './Headline.tsx'
 import { Kicker } from './Kicker.tsx'
 import { SpecLines } from './SpecLines.tsx'
@@ -44,6 +45,26 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
     return () => window.clearInterval(timer)
   }, [act.id])
 
+  // Keyboard film navigation: arrows jump between acts with an aria-live
+  // announcement of the act name (the chapter container below is the live
+  // region). Ignored inside text fields and the dev scrubber slider.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+      const target = event.target as HTMLElement | null
+      if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+      const index = ACTS.findIndex((a) => a.id === act.id)
+      const next = event.key === 'ArrowRight' ? ACTS[index + 1] : ACTS[index - 1]
+      if (next === undefined) return
+      event.preventDefault()
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      window.scrollTo({ top: next.start * max, behavior: reduced ? 'instant' : 'smooth' })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [act.id])
+
   if (chapter === undefined) return null
   return (
     <div className="pointer-events-none absolute inset-0" aria-live="polite">
@@ -78,6 +99,8 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
           </Glass>
         </div>
       ) : null}
+
+      {(act.id === 'xray' || act.id === 'rebuild') && <Callouts progress={progress} />}
 
       <nav
         aria-label="Film acts"

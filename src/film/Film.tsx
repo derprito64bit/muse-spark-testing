@@ -52,8 +52,18 @@ export function Film() {
       return false
     }
   })
+  // Reduced motion gets the static story, not a snapped film: a
+  // scroll-driven film is a barrier for some people and a nausea trigger
+  // for others (meta prompt section 6.9). Same fallback as no-WebGL.
+  const [reducedMotion] = useState(() => {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    } catch {
+      return false
+    }
+  })
   const [contextLost, setContextLost] = useState(false)
-  const showFallback = !canRender || contextLost
+  const showFallback = !canRender || contextLost || reducedMotion
 
   // Pointer parallax for fine pointers only. MotionValues, never state.
   useEffect(() => {
@@ -76,12 +86,19 @@ export function Film() {
     }
   }, [parallaxX, parallaxY])
 
-  // ?t=0.42 deep link: jump the runway to that progress on mount.
+  // ?t=0.42 deep link: jump the runway itself to that progress on mount.
+  // Mapped against the runway rect, not the document: buy deck and footer
+  // below the film would otherwise offset every value.
   useEffect(() => {
     const t = progressFromUrl()
-    if (t === null) return
-    const max = document.documentElement.scrollHeight - window.innerHeight
-    window.scrollTo({ top: t * max, behavior: 'instant' as ScrollBehavior })
+    const runwayEl = runway.current
+    if (t === null || runwayEl === null) return
+    const rect = runwayEl.getBoundingClientRect()
+    const top = rect.top + window.scrollY
+    window.scrollTo({
+      top: top + t * (rect.height - window.innerHeight),
+      behavior: 'instant' as ScrollBehavior,
+    })
   }, [])
 
   if (showFallback) {
@@ -114,6 +131,11 @@ export function Film() {
         {contextLost && (
           <p role="status" className="text-sm text-(--color-dim)">
             3D paused after a graphics reset. Static story shown.
+          </p>
+        )}
+        {reducedMotion && !contextLost && (
+          <p className="text-sm text-(--color-dim)">
+            Motion is reduced on this device, so the story is told in stills.
           </p>
         )}
       </section>

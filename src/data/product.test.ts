@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FINISH_PARAMS } from '../components/PhoneViewer/phoneMaterials.ts'
 import {
   BATTERY,
   CAMERA_LENSES,
@@ -13,6 +14,19 @@ import {
   SPEC_CATEGORIES,
   STORAGE_OPTIONS,
 } from './product.ts'
+
+/** WCAG relative luminance contrast between two hex colors. */
+function contrastRatio(a: string, b: string): number {
+  const lum = (hex: string): number => {
+    const [r, g, bl] = [0, 2, 4].map((i) => {
+      const c = Number.parseInt(hex.slice(i + 1, i + 3), 16) / 255
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (bl ?? 0)
+  }
+  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x)
+  return ((l1 ?? 0) + 0.05) / ((l2 ?? 0) + 0.05)
+}
 
 /** The film overlay and the specifications page must never disagree. */
 describe('product data consistency', () => {
@@ -64,6 +78,19 @@ describe('product data consistency', () => {
     expect(SPEC_CATEGORIES.length).toBeGreaterThan(10)
     for (const category of SPEC_CATEGORIES) {
       expect(category.rows.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('covers every finish id with a material parameter set', () => {
+    for (const finish of FINISHES) {
+      expect(FINISH_PARAMS[finish.id]).toBeDefined()
+    }
+    expect(Object.keys(FINISH_PARAMS)).toHaveLength(FINISHES.length)
+  })
+
+  it('pairs every finish accent at 4.5:1 against the surface', () => {
+    for (const params of Object.values(FINISH_PARAMS)) {
+      expect(contrastRatio(params.uiAccent, '#0f1014')).toBeGreaterThanOrEqual(4.5)
     }
   })
 })

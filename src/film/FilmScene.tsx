@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AdaptiveDpr } from '../components/PhoneViewer/PhoneCanvas.tsx'
 import { PhoneConfigProvider } from '../components/PhoneViewer/PhoneConfig.tsx'
 import { PhoneModel } from '../components/PhoneViewer/PhoneModel.tsx'
+import { StudioEnvironment } from '../components/PhoneViewer/phoneEnvironment.ts'
 import {
   FINISH_PARAMS,
   createPhoneMaterials,
@@ -12,6 +14,7 @@ import { FilmDirector, type FilmRefs } from './FilmDirector.tsx'
 import { Internals, type InternalsControl } from './internals/Internals.tsx'
 import { createInternalsMaterials } from './internals/internalsMaterials.ts'
 import { LiveScreen, useScreenRefs } from './LiveScreen.tsx'
+import { calloutBridge } from './overlay/callouts.ts'
 import type { MotionValue } from 'motion/react'
 
 interface FilmSceneProps {
@@ -54,16 +57,19 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
   const keyLight = useRef<THREE.DirectionalLight | null>(null)
   const fillLight = useRef<THREE.DirectionalLight | null>(null)
   const rimLight = useRef<THREE.DirectionalLight | null>(null)
+  const accentLight = useRef<THREE.DirectionalLight | null>(null)
   const internalsControl = useRef<InternalsControl>({
     opacity: 0,
     explode: 0,
     explodeBatt: 0,
+    explodeRadial: 0,
     chipFocus: 0,
     chipLift: 0,
     battLift: 0,
     subjectDim: 0,
     energy: 0,
   })
+  const opticsSeparation = useRef<Record<string, THREE.Group | null>>({})
   const screen = useScreenRefs()
 
   // Bind the live screen texture as the display emissive map once.
@@ -89,6 +95,8 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
       keyLight,
       fillLight,
       rimLight,
+      accentLight,
+      opticsSeparation,
       screenMode: screen.modeRef,
       screenBrightness: screen.brightnessRef,
       parallaxX,
@@ -98,7 +106,7 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
   )
 
   return (
-    <group aria-label={label}>
+    <group name={label}>
       <directionalLight ref={keyLight} position={[0.6, 0.9, 1.2]} intensity={2.2} color="#ffffff" />
       <directionalLight
         ref={fillLight}
@@ -112,13 +120,22 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
         intensity={1.1}
         color="#7fb4ff"
       />
+      {/* Camera-act accent: off-axis high source raking the collar chamfer */}
+      <directionalLight
+        ref={accentLight}
+        position={[0.5, 0.75, -0.35]}
+        intensity={0}
+        color="#e8f1ff"
+      />
       <ambientLight intensity={0.35} color="#dfe8ff" />
+      <StudioEnvironment />
       <group ref={hero}>
         <PhoneConfigProvider>
           <PhoneModel
             materials={materials}
             groups={{ frame, back, glass }}
             animateFocusRing={false}
+            opticsSeparation={opticsSeparation}
           />
         </PhoneConfigProvider>
       </group>
@@ -132,7 +149,28 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
         runningRef={screen.runningRef}
       />
       <AdaptiveDpr cap={1.75} />
+      <CalloutBridge refs={refs} />
       <FilmDirector progress={progress} materials={materials} refs={refs} />
     </group>
   )
+}
+
+/**
+ * Feeds the HTML callout layer: the live camera plus the shell groups as
+ * occlusion casters. Zero allocation after mount.
+ */
+function CalloutBridge({ refs }: { refs: FilmRefs }) {
+  const camera = useThree((state) => state.camera)
+  const occluders = useMemo<THREE.Object3D[]>(() => {
+    calloutBridge.occluders = []
+    return calloutBridge.occluders
+  }, [])
+  useFrame(() => {
+    calloutBridge.camera = camera
+    occluders.length = 0
+    for (const ref of [refs.frame, refs.back, refs.glass]) {
+      if (ref.current !== null) occluders.push(ref.current)
+    }
+  })
+  return null
 }

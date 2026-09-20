@@ -4,6 +4,9 @@ import * as THREE from 'three'
 import { silhouetteHeightM, silhouetteWidthM } from './phoneDimensions.ts'
 import { PhoneLighting } from './PhoneLighting.tsx'
 import { PhoneModel } from './PhoneModel.tsx'
+import { StudioEnvironment } from './phoneEnvironment.ts'
+import { FINISH_PARAMS } from './phoneMaterials.ts'
+import { usePhoneConfig } from './PhoneConfig.tsx'
 
 export type PhonePoseId = 'hero' | 'rear' | 'side' | 'front'
 
@@ -33,17 +36,22 @@ function idleNoise(t: number): number {
 interface PhoneSceneProps {
   pose?: PhonePoseId
   label: string
+  detail?: 'high' | 'low'
 }
 
 /**
  * Viewport-aware phone study. Holds the phone at a fit share of the viewport
  * height on every monitor, damps rotation at 5.5/s, snaps under reduced motion.
  */
-export function PhoneScene({ pose = 'hero', label }: PhoneSceneProps) {
+export function PhoneScene({ pose = 'hero', label, detail = 'high' }: PhoneSceneProps) {
   const group = useRef<THREE.Group>(null)
   const size = useThree((state) => state.size)
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera
   const target = useMemo(() => POSES[pose], [pose])
+  // Warm finishes borrow the bounce tint so ember reads under the cool rig.
+  const { finish } = usePhoneConfig()
+  const bounceTint = FINISH_PARAMS[finish]?.envTint ?? '#ffffff'
+  const rear = pose === 'rear' || pose === 'side'
   // Deterministic per-pose phase so two studies never sway in sync.
   const phase = pose.length * 37.7 + target.rx * 10
 
@@ -80,10 +88,11 @@ export function PhoneScene({ pose = 'hero', label }: PhoneSceneProps) {
   })
 
   return (
-    <group aria-label={label}>
-      <PhoneLighting />
+    <group name={label}>
+      <StudioEnvironment />
+      <PhoneLighting bounceTint={bounceTint} rear={rear} />
       <group ref={group}>
-        <PhoneModel />
+        <PhoneModel detail={detail} />
       </group>
     </group>
   )

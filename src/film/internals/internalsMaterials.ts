@@ -1,4 +1,5 @@
-import { Color, MeshStandardMaterial } from 'three'
+import { Color, MeshBasicMaterial, MeshStandardMaterial } from 'three'
+import { createDieMarkingTexture, createFloorplanTexture } from './siliconTextures.ts'
 
 export interface InternalsMaterialSet {
   board: MeshStandardMaterial
@@ -12,6 +13,10 @@ export interface InternalsMaterialSet {
   housing: MeshStandardMaterial
   coil: MeshStandardMaterial
   dark: MeshStandardMaterial
+  /** Laser marking decal, low contrast. */
+  dieMark: MeshBasicMaterial
+  /** Floorplan detail overlay. */
+  dieFloor: MeshBasicMaterial
 }
 
 export const INTERNALS_KEYS = [
@@ -26,6 +31,8 @@ export const INTERNALS_KEYS = [
   'housing',
   'coil',
   'dark',
+  'dieMark',
+  'dieFloor',
 ] as const satisfies ReadonlyArray<keyof InternalsMaterialSet>
 
 /**
@@ -106,7 +113,33 @@ export function createInternalsMaterials(): InternalsMaterialSet {
     metalness: 0,
     ...transparent,
   })
-  return { board, trace, shield, gold, substrate, die, cell, cellGlow, housing, coil, dark }
+  const dieMark = new MeshBasicMaterial({
+    map: createDieMarkingTexture(),
+    depthWrite: false,
+    ...transparent,
+  })
+  dieMark.opacity = 0
+  const dieFloor = new MeshBasicMaterial({
+    map: createFloorplanTexture(),
+    depthWrite: false,
+    ...transparent,
+  })
+  dieFloor.opacity = 0
+  return {
+    board,
+    trace,
+    shield,
+    gold,
+    substrate,
+    die,
+    cell,
+    cellGlow,
+    housing,
+    coil,
+    dark,
+    dieMark,
+    dieFloor,
+  }
 }
 
 /** Disposes every registry material. Safe to call once per owner. */

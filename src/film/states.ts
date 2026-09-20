@@ -27,6 +27,18 @@ export interface FilmStates {
   energy: number
   /** 0..1 live screen brightness. */
   screenOn: number
+  /** 0..1 radial fan amount, separate from the axial explode. */
+  explodeRadial: number
+  /** 0..1 how far the camera module separates for its own beat. */
+  explodeOptics: number
+  /** 0..1 label and callout opacity for the exploded diagram. */
+  calloutOpacity: number
+  /** 0..1 cross-section clip, reserved for a future cutaway beat. */
+  sectionCut: number
+  /** 0..1 focus-pull amount toward the current subject. */
+  focusPull: number
+  /** 0..1 macro atmosphere presence in the closeup beats. */
+  macroAtmos: number
 }
 
 /**
@@ -53,6 +65,12 @@ const STATES: FilmStates = {
   optical: 0,
   energy: 0,
   screenOn: 0,
+  explodeRadial: 0,
+  explodeOptics: 0,
+  calloutOpacity: 0,
+  sectionCut: 0,
+  focusPull: 0,
+  macroAtmos: 0,
 }
 
 /**
@@ -64,23 +82,37 @@ export function computeFilmStates(p: number): FilmStates {
   STATES.chipLift = ramplike(p, 0.34, 0.37, 0.455, 0.485)
   STATES.battLift = ramplike(p, 0.893, 0.91, 0.92, 0.928)
   STATES.optical = ramplike(p, 0.645, 0.675, 0.715, 0.74)
-  STATES.explodeXray = ramplike(p, 0.27, 0.32, 0.485, 0.515)
+  STATES.explodeXray = ramplike(p, 0.27, 0.32, 0.48, 0.5)
   STATES.explodeBatt = ramplike(p, 0.885, 0.893, 0.905, 0.918)
   STATES.shellGhost = Math.min(
     1,
-    ramplike(p, 0.25, 0.31, 0.44, 0.52) + ramplike(p, 0.875, 0.9, 0.905, 0.925),
+    ramplike(p, 0.25, 0.31, 0.47, 0.5) + ramplike(p, 0.875, 0.9, 0.905, 0.925),
   )
-  STATES.shellSplit = ramplike(p, 0.29, 0.34, 0.47, 0.515)
+  STATES.shellSplit = ramplike(p, 0.29, 0.34, 0.465, 0.5)
   STATES.internalOpacity = Math.min(
     1,
-    ramplike(p, 0.26, 0.31, 0.5, 0.518) + ramplike(p, 0.88, 0.9, 0.905, 0.93),
+    ramplike(p, 0.26, 0.31, 0.485, 0.505) + ramplike(p, 0.88, 0.9, 0.905, 0.93),
   )
-  STATES.chipFocus = ramplike(p, 0.36, 0.445, 0.49, 0.525)
+  STATES.chipFocus = ramplike(p, 0.36, 0.445, 0.48, 0.5)
   STATES.subjectDim = Math.min(
     1,
     ramplike(p, 0.39, 0.42, 0.46, 0.485) + ramplike(p, 0.893, 0.905, 0.92, 0.928),
   )
   STATES.energy = ramplike(p, 0.885, 0.9, 0.91, 0.93)
   STATES.screenOn = ramplike(p, 0.03, 0.08, 1, 1)
+  // Prompt B control plane. Windows overlap their neighbours rather than
+  // butting them, so no second-derivative seam at handoffs.
+  STATES.explodeRadial = ramplike(p, 0.27, 0.32, 0.48, 0.5)
+  STATES.explodeOptics = ramplike(p, 0.6, 0.645, 0.7, 0.725)
+  STATES.calloutOpacity = ramplike(p, 0.29, 0.33, 0.47, 0.5)
+  STATES.sectionCut = 0
+  STATES.focusPull = Math.max(
+    ramplike(p, 0.4, 0.425, 0.445, 0.47),
+    ramplike(p, 0.655, 0.675, 0.695, 0.715),
+  )
+  STATES.macroAtmos = Math.max(
+    ramplike(p, 0.41, 0.43, 0.45, 0.47),
+    ramplike(p, 0.66, 0.68, 0.7, 0.72),
+  )
   return STATES
 }

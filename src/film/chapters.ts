@@ -9,6 +9,7 @@ import {
 } from '../data/product.ts'
 import { formatNumber } from '../lib/format.ts'
 import type { ActId } from './key.ts'
+import type { CalloutDef } from './overlay/callouts.ts'
 
 export interface ChapterNumeral {
   value: string
@@ -117,6 +118,37 @@ export const CHAPTERS: Chapter[] = [
     act: 'final',
     kicker: 'Aether One X',
     headline: 'Choose your finish.',
-    body: 'Three finishes, three capacities. Configure below.',
+    body: 'Five finishes, three capacities. Configure below.',
   },
+]
+
+/**
+ * Exploded-diagram callouts (Prompt B section 6). Copy lives here as data,
+ * never inline in JSX. Every figure is imported from src/data so the film
+ * and the specifications page can never disagree.
+ */
+export const CALLOUTS: CalloutDef[] = [
+  {
+    partId: 'die',
+    title: CHIPSET.name,
+    body: `${CHIPSET.processNm} nm · ${CHIPSET.dieAreaMm2} mm²`,
+    priority: 1,
+  },
+  {
+    partId: 'bga-array',
+    title: 'BGA array',
+    body: '14 × 14 balls · revealed on lift',
+    priority: 4,
+  },
+  { partId: 'cell', title: 'Silicon-carbon cell', body: `${BATTERY.capacity} mAh`, priority: 2 },
+  { partId: 'charge-coil', title: 'Wireless coil', body: '40 W', priority: 5 },
+  {
+    partId: 'lens-main',
+    title: 'Main camera',
+    body: `${CAMERA_LENSES[0]?.mp ?? 50} MP`,
+    priority: 3,
+  },
+  { partId: 'lens-tele', title: 'Telephoto', body: CAMERA_LENSES[2]?.detail ?? '', priority: 6 },
+  { partId: 'shield-lid', title: 'EMI shield', body: 'lifts off first', priority: 7 },
+  { partId: 'graphite-sheet', title: 'Graphite sheet', body: 'spreads the heat', priority: 8 },
 ]

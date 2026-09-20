@@ -4,6 +4,11 @@ import * as THREE from 'three'
 import { PhoneConfigProvider } from './PhoneConfig.tsx'
 import { PhoneScene, type PhonePoseId } from './PhoneScene.tsx'
 
+// Explicit per docs/rendering.md: sRGB pipeline, one ACES Filmic curve
+// shared with the film canvas. R3F enables both by default; stated here so
+// a default change upstream fails loudly instead of washing the catalog.
+THREE.ColorManagement.enabled = true
+
 /** Disposes every geometry and material in the scene exactly once on unmount. */
 function SceneDisposer() {
   const scene = useThree((state) => state.scene)
@@ -57,6 +62,8 @@ interface PhoneCanvasProps {
   pose: PhonePoseId
   label: string
   dprCap: number
+  /** Low drops knurling, thread ring, and the second baffle (mobile LOD). */
+  detail?: 'high' | 'low'
   /** Skip the internal provider when an ancestor already provides config. */
   sharedConfig?: boolean
   onCreated?: (gl: THREE.WebGLRenderer) => void
@@ -68,6 +75,7 @@ export function PhoneCanvas({
   pose,
   label,
   dprCap,
+  detail = 'high',
   sharedConfig = false,
   onCreated,
   onContextLost,
@@ -75,7 +83,7 @@ export function PhoneCanvas({
   const scene = (
     <>
       <AdaptiveDpr cap={dprCap} />
-      <PhoneScene pose={pose} label={label} />
+      <PhoneScene pose={pose} label={label} detail={detail} />
       <SceneDisposer />
     </>
   )
@@ -85,6 +93,7 @@ export function PhoneCanvas({
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       camera={{ fov: 24, near: 0.01, far: 10, position: [0, 0.01, 0.62] }}
       onCreated={({ gl }) => {
+        gl.toneMapping = THREE.ACESFilmicToneMapping
         onCreated?.(gl)
         const canvas = gl.domElement
         const handleLost = (event: Event) => {
