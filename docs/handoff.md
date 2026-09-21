@@ -61,6 +61,11 @@ not dial). All uncommitted.
   `npm run verify` green, e2e:quick 5/5, 97 unit tests green.
 - Ring-hole bug + R3F aria-label + parallax-accumulation fixes noted
   below in prior entries; all covered by tests.
+- Subpixel veil bug (fixed): the macro overlay plane sat at opacity 1 in
+  the film because SHELL_MATS drove it, washing every off-screen face
+  gray. Removed from SHELL_MATS (distance fade owns it); glass opacity
+  now tracks power state (dark mirror off, 0.42 revealing live screen
+  on). Single biggest visual fix of the session.
 - Honest gaps: real-GPU traces (M10); reduced-motion e2e coverage;
   rack focus deferred to measurement (focusPull/macroAtmos wired to
   accent + sensor shimmer as the no-DOF path); sectionCut reserved;

@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { silhouetteHeightM, silhouetteWidthM } from './phoneDimensions.ts'
 import { PhoneLighting } from './PhoneLighting.tsx'
@@ -48,6 +48,38 @@ export function PhoneScene({ pose = 'hero', label, detail = 'high' }: PhoneScene
   const size = useThree((state) => state.size)
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera
   const target = useMemo(() => POSES[pose], [pose])
+  // TEMP-DEBUG diagnosis hook. Removed before merge.
+  const debugScene = useThree((state) => state.scene)
+  const debugCamera = useThree((state) => state.camera)
+  useEffect(() => {
+    const w = window as unknown as {
+      __scene?: THREE.Scene
+      __ray?: (x: number, y: number) => string
+    }
+    w.__scene = debugScene
+    const raycaster = new THREE.Raycaster()
+    const ndc = new THREE.Vector2()
+    w.__ray = (x, y) => {
+      ndc.set(x, y)
+      raycaster.setFromCamera(ndc, debugCamera)
+      const hits = raycaster.intersectObjects(debugScene.children, true)
+      return hits
+        .slice(0, 6)
+        .map((hit) => {
+          const o = hit.object as THREE.Mesh
+          if (!o.isMesh) return 'non-mesh'
+          const m = o.material as THREE.Material | THREE.Material[]
+          const mat = Array.isArray(m)
+            ? `array[${o.geometry.groups.map((g) => g.materialIndex).join(',')}]`
+            : `${m.type}:${(m as THREE.MeshPhysicalMaterial).color?.getHexString()}:op${(m as THREE.MeshPhysicalMaterial).opacity?.toFixed(2)}:side${(m as THREE.MeshPhysicalMaterial).side}:vis=${o.visible}:dw=${(m as THREE.MeshPhysicalMaterial).depthWrite}`
+          return `${o.geometry.type}@${o.position
+            .toArray()
+            .map((v) => +v.toFixed(4))
+            .join(',')} mat=${mat}`
+        })
+        .join('\n')
+    }
+  }, [debugScene, debugCamera])
   // Warm finishes borrow the bounce tint so ember reads under the cool rig.
   const { finish } = usePhoneConfig()
   const bounceTint = FINISH_PARAMS[finish]?.envTint ?? '#ffffff'

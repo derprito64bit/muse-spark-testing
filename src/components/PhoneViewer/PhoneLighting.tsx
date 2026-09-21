@@ -20,8 +20,11 @@ export function PhoneLighting({
   rear?: boolean
 }) {
   const rig = useMemo(() => {
-    const key = new THREE.RectAreaLight('#ffffff', 4.2, 0.5, 0.34)
-    key.position.set(0.45, 0.7, 0.9)
+    // Key softbox off the face axis: rakes the rails without washing the
+    // flat glass into a gray card. A near-frontal area source reads flat;
+    // fifty degrees off-axis reads as a travelling line.
+    const key = new THREE.RectAreaLight('#ffffff', 4.2, 0.45, 0.3)
+    key.position.set(0.85, 0.45, 0.5)
     key.lookAt(0, 0, 0)
     const strip = new THREE.RectAreaLight('#dfe9ff', 4, 0.1, 0.5)
     strip.position.set(-0.7, 0.15, 0.55)

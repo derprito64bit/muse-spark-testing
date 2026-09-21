@@ -43,7 +43,6 @@ const SHELL_MATS = [
   'button',
   'logo',
   'regulatory',
-  'subpixel',
   'focusRing',
   'rangeGlass',
 ] as const satisfies ReadonlyArray<keyof PhoneMaterialSet>
@@ -249,7 +248,10 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     if (refs.glass.current !== null) refs.glass.current.position.z = split * 0.0045
     if (refs.back.current !== null) refs.back.current.position.z = -split * 0.0036
     materials.display.opacity = Math.max(0.02, 1 - st.shellGhost * 0.95)
-    materials.screen.opacity = Math.max(0.05, 0.42 - st.shellGhost * 0.36)
+    // Glass tracks power state: a dark mirror when off, dimmed to reveal
+    // the live screen when on, dissolved with the shell in x-ray. A flat
+    // 0.42 washed every off-screen act gray.
+    materials.screen.opacity = Math.max(0.05, 1 - st.screenOn * 0.58 - st.shellGhost * 0.36)
 
     // Live screen mode per act.
     const mode: ScreenMode =

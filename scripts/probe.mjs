@@ -11,10 +11,8 @@ const browser = await chromium.launch({
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 const page = await context.newPage()
 await page.goto(url, { waitUntil: 'load' })
-await page.waitForSelector('[data-testid="phone-viewer"]', { timeout: 30000 })
-await page.getByTestId('phone-viewer').first().scrollIntoViewIfNeeded()
-await page.waitForSelector('[data-testid="phone-canvas"]', { timeout: 30000 })
-await page.waitForTimeout(5000)
+// NDC fractions are canvas-relative; caller picks points on the visible phone.
+await page.waitForTimeout(8000)
 for (const pt of pts) {
   const [fx, fy] = pt.split(',').map(Number)
   const hit = await page.evaluate(

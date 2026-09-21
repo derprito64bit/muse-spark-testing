@@ -209,7 +209,10 @@ function normalize3(x: number, y: number, z: number): [number, number, number] {
 
 /**
  * Rounded-rectangle loop resampled to exactly count points by arclength,
- * starting at the +X axis to phase-match the superellipse outer.
+ * starting at the +X axis (right-edge midpoint) to phase-match the
+ * superellipse outer. Phase alignment is load-bearing: the annulus strip
+ * joins outer[i] to inner[i], so a rotated start twists the lid into a
+ * pinwheel that covers the opening and z-fights with itself.
  */
 export function roundedRectLoop(
   x: number,
@@ -220,21 +223,23 @@ export function roundedRectLoop(
   count: number,
 ): Array<[number, number]> {
   const c = Math.min(r, w / 2, h / 2)
-  const centers: Array<[number, number, number]> = [
-    [x + w - c, y + c, -Math.PI / 2],
-    [x + w - c, y + h - c, 0],
-    [x + c, y + h - c, Math.PI / 2],
-    [x + c, y + c, Math.PI],
-  ]
-  // Dense polyline: corner arcs plus the straight edges between them.
-  const dense: Array<[number, number]> = []
+  // Walk CCW from the right-edge midpoint: up the right edge, around
+  // TR, TL, BL, BR corners, back along the bottom edge.
+  const dense: Array<[number, number]> = [[x + w, y + h / 2]]
   const perCorner = 24
-  centers.forEach(([cx, cy, start]) => {
-    for (let i = 0; i <= perCorner; i++) {
-      const a = (start ?? 0) + (i / perCorner) * (Math.PI / 2)
+  const corners: Array<[number, number, number, number]> = [
+    // [centerX, centerY, startAngle, endAngle]
+    [x + w - c, y + h - c, 0, Math.PI / 2],
+    [x + c, y + h - c, Math.PI / 2, Math.PI],
+    [x + c, y + c, Math.PI, Math.PI * 1.5],
+    [x + w - c, y + c, Math.PI * 1.5, Math.PI * 2],
+  ]
+  for (const [cx, cy, start, end] of corners) {
+    for (let i = 1; i <= perCorner; i++) {
+      const a = (start ?? 0) + (i / perCorner) * ((end ?? 0) - (start ?? 0))
       dense.push([(cx ?? 0) + Math.cos(a) * c, (cy ?? 0) + Math.sin(a) * c])
     }
-  })
+  }
   // Resample uniformly by arclength, starting at the first point (+X axis).
   const lengths: number[] = [0]
   for (let i = 1; i <= dense.length; i++) {

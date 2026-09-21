@@ -55,9 +55,10 @@ export function createStudioEnvironmentCanvas(): HTMLCanvasElement {
 
   // The long softbox: large, slightly left of top centre. This panel draws
   // the continuous specular line down the frame rail.
-  softRect(120, 30, 300, 150, '#f5f8ff', 45)
-  // Core hotspot so the rail highlight has a bright centre to travel.
-  softRect(180, 60, 180, 90, '#ffffff', 25)
+  softRect(120, 30, 300, 150, '#dfe6f5', 45)
+  // Core hotspot, small and off-axis: the dark mirror shows a bright band
+  // sweeping across it, never a full-face wash.
+  softRect(150, 45, 120, 60, '#ffffff', 22)
 
   // The strip: narrow, bright, right of the key. Edge-on to the rail it
   // draws the second, tighter highlight on the chamfer faces.
