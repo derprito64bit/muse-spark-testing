@@ -125,7 +125,9 @@ function PhoneModelInner({
     [],
   )
   const glassSlabGeometry = useMemo(
-    () => createSlabGeometry(DIM.w - BEZEL * 2, DIM.h - BEZEL * 2, FRONT_GLASS.depth, 0.0011),
+    // Corner radius matches the frame-ring opening (0.0012): matched
+    // corners, no slivers or overlaps at the glass meet.
+    () => createSlabGeometry(DIM.w - BEZEL * 2, DIM.h - BEZEL * 2, FRONT_GLASS.depth, 0.0012),
     [],
   )
   const displaySlabGeometry = useMemo(
@@ -134,19 +136,20 @@ function PhoneModelInner({
         DIM.w - BEZEL * 2 - DISPLAY_INSET * 2,
         DIM.h - BEZEL * 2 - DISPLAY_INSET * 2,
         DISPLAY_PANEL.depth,
-        0.0006,
+        0.001,
         0.0001,
       ),
     [],
   )
   // Bezel ink ring: glass footprint outside, active area inside, feathered
-  // edge. Renders under the glass slab so the specular passes over unbroken.
+  // edge. Corner radii match the glass (0.0012) and the display (0.001).
+  // Renders under the glass slab so the specular passes over unbroken.
   const bezelGeometry = useMemo(
     () =>
       createBezelGeometry(
         DIM.w - BEZEL * 2,
         DIM.h - BEZEL * 2,
-        0.0011,
+        0.0012,
         DIM.w - BEZEL * 2 - DISPLAY_INSET * 2,
         DIM.h - BEZEL * 2 - DISPLAY_INSET * 2,
         0.001,

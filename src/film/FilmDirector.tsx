@@ -95,6 +95,21 @@ const BASE_OPACITY: Partial<Record<keyof PhoneMaterialSet, number>> = {
   focusRing: 0,
 }
 
+/**
+ * Translucent optics never write depth: with depthWrite forced true, the
+ * glass bricks over everything behind it (barrels, baffles, medallion,
+ * ToF internals all vanish and lenses read as dark stickers).
+ */
+const NO_DEPTH_WRITE: ReadonlySet<string> = new Set([
+  'lensGlassA',
+  'lensGlassB',
+  'lensGlassC',
+  'moduleGlass',
+  'periscopeGlass',
+  'flashDiffuser',
+  'tofWindow',
+])
+
 export interface FilmRefs {
   hero: MutableRefObject<THREE.Group | null>
   frame: MutableRefObject<THREE.Group | null>
@@ -262,7 +277,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const ghost = st.shellGhost > 0.01
     for (const name of SHELL_MATS) {
       const mat = materials[name]
-      mat.depthWrite = !ghost
+      mat.depthWrite = NO_DEPTH_WRITE.has(name) ? false : !ghost
       const base = BASE_OPACITY[name] ?? 1
       mat.opacity = ghost ? Math.max(0.02, base - st.shellGhost * 0.9) : base
     }
@@ -341,14 +356,14 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
 
     // Optical separation: cover, collar, barrel, element, sensor open in
     // sequence over the optics beat (Prompt B section 5.2). Outward is -z.
-    // Distances breathe the assembly open without floating parts into the
-    // macro view: the separated cover must never occlude the tunnel.
+    // Tight breathing, not detachment: at macro scale 2.2mm of cover travel
+    // reads as a part floating off into space, so the stack stays laced.
     const layers = [
-      ['cover', 0, 0.0022],
-      ['collar', 0.15, 0.0018],
-      ['barrel', 0.3, 0.0012],
-      ['element', 0.45, 0.0007],
-      ['sensor', 0.6, 0.0003],
+      ['cover', 0, 0.0012],
+      ['collar', 0.15, 0.001],
+      ['barrel', 0.3, 0.0007],
+      ['element', 0.45, 0.0004],
+      ['sensor', 0.6, 0.0002],
     ] as const
     const sep = st.explodeOptics
     for (const lens of ['main', 'ultra', 'mid', 'periscope'] as const) {

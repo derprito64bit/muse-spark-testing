@@ -20,13 +20,13 @@ export function PhoneLighting({
   rear?: boolean
 }) {
   const rig = useMemo(() => {
-    // Key softbox off the face axis: rakes the rails without washing the
-    // flat glass into a gray card. A near-frontal area source reads flat;
-    // fifty degrees off-axis reads as a travelling line.
-    const key = new THREE.RectAreaLight('#ffffff', 4.2, 0.45, 0.3)
-    key.position.set(0.85, 0.45, 0.5)
+    // Key softbox well off the face axis: narrow and dim enough that the
+    // flat glass carries a travelling band, never a full-face wash. A wide
+    // hot panel burns the whole screen white and reads as a second phone.
+    const key = new THREE.RectAreaLight('#ffffff', 2.2, 0.28, 0.18)
+    key.position.set(1.0, 0.35, 0.35)
     key.lookAt(0, 0, 0)
-    const strip = new THREE.RectAreaLight('#dfe9ff', 4, 0.1, 0.5)
+    const strip = new THREE.RectAreaLight('#dfe9ff', 2.4, 0.07, 0.5)
     strip.position.set(-0.7, 0.15, 0.55)
     strip.lookAt(0, 0, 0)
     // Rear softbox: cool, high, behind. Lifts the plateau out of the rim

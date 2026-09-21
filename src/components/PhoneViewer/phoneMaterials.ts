@@ -439,8 +439,8 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
     envMapIntensity: 1.5,
   })
   const knurlMaps = createKnurlMaps()
-  knurlMaps.normal.repeat.set(10.5, 1)
-  knurlMaps.rough.repeat.set(10.5, 1)
+  knurlMaps.normal.repeat.set(12, 1)
+  knurlMaps.rough.repeat.set(12, 1)
   const knurlWall = makeMaterial({
     color: new Color(params.frameColor),
     metalness: 1,
@@ -466,11 +466,11 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
   // src/data/product.ts focal specs (Prompt A2 section 9).
   const microText = createMicroTextTexture(
     [
-      { text: '23MM 1:1.6', x: 0, y: 0.0162 },
-      { text: '14MM 1:2.2', x: -0.01334, y: -0.0077 },
-      { text: '50MM 1:1.9', x: 0.01334, y: -0.0077 },
-      { text: '135MM 1:3.0', x: 0.0085, y: -0.0146 },
-      { text: 'NVT-2 AF', x: 0.01217, y: 0.00046 },
+      { text: '23MM 1:1.6', x: 0, y: 0.0182 },
+      { text: '14MM 1:2.2', x: -0.01463, y: -0.00845 },
+      { text: '50MM 1:1.9', x: 0.01463, y: -0.00845 },
+      { text: '135MM 1:3.0', x: 0.0085, y: -0.0151 },
+      { text: 'NVT-2 AF', x: 0.01351, y: 0.00089 },
     ],
     COLLAR.glass.r,
   )

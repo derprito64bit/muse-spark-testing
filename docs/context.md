@@ -51,30 +51,30 @@ other 4 finishes.
 ## Blender link (LIVE — use it for design renders)
 
 - Blender 4.5.14 LTS (Steam) + MCP-for-Blender addon v1.7, protocol 9.
-  Addon file also copied to 5.x config dirs; enabled via headless prefs.
-- If link drops: Blender N-panel → BlenderMCP tab → Start MCP Server,
-  then `blender_get_addon_status`.
-- Scene state: `AetherOneX` collection, Cycles GPU (RTX 3070) 64spp +
-  denoise, dark world, Key 400W / RimStrip 250W / Fill 80W / RearSoft 80W
-  (raking from left). Phone built face-up (+Z = screen) from dimension
-  tables: Body loft + BackGlass/FrontGlass lofts, ScreenOff/BackObsidian
-  body cap slots (Screen slab deleted — it was buried), 2-tier plateau +
-  3 L-lenses (collar/barrel/aperture/dome) + flash + rangefinder.
-  Saved: `C:\Users\Aaron\AppData\Local\Temp\opencode\aether-one-x.blend`.
-  Renders: `aether-hero/rear/rear2/rear3/rear4.png` (rear3 = best).
-- Blender lessons: 2D-curve slabs render UNCAPPED (open tubes) — build
-  solids with bmesh loft (4 rings + chamfer + triangle-fill caps) instead;
-  solid body needs dark cap material under cover glass or metal shows
-  through; big flat-on area light blows obsidian white — use dim raking
-  light. Each execute_blender_code call is stateless — redefine helpers.
+  Auto-start flag saved in the .blend; a relaunch usually reconnects.
+  Else: N-panel → BlenderMCP tab → Start MCP Server.
+- FILE: `C:\Users\Aaron\AppData\Local\Temp\opencode\aether-one-x.blend`
+  (open live in the user's Blender right now).
+- Scene (v2, REBUILT circular): n=5 body, enlarged module outerR 0.0235
+  at (0, 0.0458), collar steps, seal, cover glass, 3 lenses
+  (0.0060/0.0049/0.0049, flat dark domes), periscope + prism, arc flash,
+  ToF pair, mic, iris medallion + ring, 192-tooth knurl, 2 dial rings,
+  volume/power side keys, USB-C, AETHER text. Cycles GPU 64spp + denoise,
+  Key 400W / RimStrip 250W / Fill 80W / RearSoft 50W size 0.35 (raking).
+  Renders: `aether-v2-rear3.png` (best), `aether-v2-macro2.png` (knurl +
+  triangle verified).
+- Blender lessons: 2D-curve slabs render UNCAPPED — bmesh loft instead;
+  body needs dark caps under cover glass; big flat-on area light blows
+  obsidian white — dim raking light; bmesh has NO create_torus (hand-roll
+  parametric torus); transmission glass over bright lights blows white —
+  darken lens base. execute_blender_code is stateless — redefine helpers.
 
 ## Dimensions (meters, single source: phoneDimensions.ts)
 
-Body 0.0768×0.1596×0.0078, BODY_N=5. Plateau upper-left at
-(-0.0192, 0.052): lower 0.0342²×0.0011, upper 0.0262²×0.0019 offset
-(-0.0032, +0.0028). Lenses (shelf-local): main r.0057 (-.005,+.0035),
-ultra r.0057 (-.0045,-.0038), tele r.0046 (+.0045,-.0035). Finishes:
-obsidian/titanium/glacier/ember/slate (phoneFinishes.ts).
+Body 0.0768×0.1596×0.0078, BODY_N=5. Circular module centered (0, 0.0458),
+outerR 0.0235 (47mm). Lenses polar R=0.0102: main r.0060 @90°, ultra
+r.0049 @210°, mid r.0049 @330°, periscope below, ToF pair, arc flash.
+Finishes: obsidian/titanium/glacier/ember/slate/clear.
 
 ## Honest gaps
 

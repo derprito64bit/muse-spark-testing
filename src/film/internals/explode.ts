@@ -16,7 +16,7 @@ import {
   SUB_PARTS,
   VAPOR_CHAMBER,
 } from './layout.ts'
-import { PERISCOPE } from '../../components/PhoneViewer/phoneDimensions.ts'
+import { PERISCOPE, TOF } from '../../components/PhoneViewer/phoneDimensions.ts'
 import { lensSeat } from '../../components/PhoneViewer/CameraAssembly.tsx'
 import { LENSES } from '../../components/PhoneViewer/phoneDimensions.ts'
 
@@ -236,8 +236,12 @@ const RAW: RawEntry[] = [
   ),
   register(
     'tof-module',
-    [CAMERA_INTERNAL.cx + 0.0122, CAMERA_INTERNAL.cy + 0.004, CAMERA_INTERNAL.cz],
-    0.003,
+    [
+      CAMERA_INTERNAL.cx + TOF.ringR * Math.cos((TOF.angleDeg * Math.PI) / 180),
+      CAMERA_INTERNAL.cy + TOF.ringR * Math.sin((TOF.angleDeg * Math.PI) / 180),
+      CAMERA_INTERNAL.cz,
+    ],
+    0.009,
     12,
     0.3,
     'optics',

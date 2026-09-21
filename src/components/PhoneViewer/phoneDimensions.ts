@@ -38,41 +38,40 @@ export const CERAMIC_FACE_Z = -0.00391
 export const MODULE = {
   cx: 0, // centered horizontally, not offset
   cy: 0.0458, // 45.8mm up from body center
-  outerR: 0.0212, // 42.4mm diameter, 55% of body width
+  outerR: 0.0235, // 47mm diameter, 61% of body width (enlarged per review)
   proud: 0.0019, // 1.9mm total rise off the rear panel
   baseFillet: 0.0007, // 0.7mm blend into the rear panel, a fillet not a chamfer
 } as const
 /** Concentric collar rings. Two machined steps, not one band. */
 export const COLLAR = {
-  outer: { rOut: 0.0212, rIn: 0.0186, rise: 0.0019, knurlTeeth: 168, knurlDepth: 0.00018 },
-  step: { rOut: 0.0186, rIn: 0.0172, rise: 0.0012 },
-  glass: { r: 0.0172, rise: 0.0008, dome: 0.00006 },
+  outer: { rOut: 0.0235, rIn: 0.0206, rise: 0.0019, knurlTeeth: 192, knurlDepth: 0.00018 },
+  step: { rOut: 0.0206, rIn: 0.0191, rise: 0.0012 },
+  glass: { r: 0.0191, rise: 0.0008, dome: 0.00006 },
 } as const
 /** Dark seal ring where the cover glass meets the step. */
-export const GLASS_SEAL = { rOut: 0.01725, rIn: 0.0169, depth: 0.00006 } as const
+export const GLASS_SEAL = { rOut: 0.01915, rIn: 0.0188, depth: 0.00006 } as const
 /** Three round assemblies on a triangle, apex up. Radius from module center. */
-export const LENS_RING_R = 0.0092
+export const LENS_RING_R = 0.0102
 /**
  * Round lens specs, polar placement. Per-lens barrel depths are physical:
  * ultra shallow (1.0mm), main (1.6mm), mid-tele deepest (2.1mm).
  * coatHue drives per-lens AR coating tint in radians.
  */
 export const LENSES = [
-  { key: 'main', angleDeg: 90, r: 0.0054, barrelDepth: 0.0016, elementZ: -0.0009, coatHue: 2.1 },
-  { key: 'ultra', angleDeg: 210, r: 0.0044, barrelDepth: 0.001, elementZ: -0.0005, coatHue: 4.6 },
-  { key: 'mid', angleDeg: 330, r: 0.0044, barrelDepth: 0.0021, elementZ: -0.0013, coatHue: 0.3 },
+  { key: 'main', angleDeg: 90, r: 0.006, barrelDepth: 0.0016, elementZ: -0.0009, coatHue: 2.1 },
+  { key: 'ultra', angleDeg: 210, r: 0.0049, barrelDepth: 0.001, elementZ: -0.0005, coatHue: 4.6 },
+  { key: 'mid', angleDeg: 330, r: 0.0049, barrelDepth: 0.0021, elementZ: -0.0013, coatHue: 0.3 },
 ] as const
 /** Periscope window: a rounded rectangle, folded optic below the triangle. */
 export const PERISCOPE = {
   x: 0,
   // Deviation from the first draft (y -0.0118, w 0.0128, h 0.0062): those
-  // numbers collide with the ultra/mid collars (bottom edge at -0.0102) and
-  // the bottom corners escape the cover glass (0.0189 > 0.0172). Parked and
-  // sized to clear every collar and land inside the glass.
-  y: -0.0136,
-  w: 0.011,
-  h: 0.005,
-  r: 0.0021,
+  // numbers collide with the ultra/mid collars and escape the cover glass.
+  // Parked and sized to clear every collar and land inside the glass.
+  y: -0.0151,
+  w: 0.0122,
+  h: 0.0055,
+  r: 0.0022,
   recess: 0.0004,
   prismAngleDeg: 40, // interior face angle, so you cannot see straight down
   cavityDepth: 0.0026,
@@ -81,16 +80,16 @@ export const PERISCOPE = {
 export const FLASH_ARC = {
   startDeg: 24,
   sweepDeg: 34,
-  rIn: 0.0176,
-  rOut: 0.0184,
+  rIn: 0.0195,
+  rOut: 0.0204,
   dies: 2,
   diffuserRough: 0.62,
 } as const
 /** Module microphone, 0.7mm. Present because real modules have one. */
-export const MODULE_MIC = { angleDeg: 152, ringR: 0.0152, d: 0.0007, depth: 0.0011 } as const
+export const MODULE_MIC = { angleDeg: 152, ringR: 0.0168, d: 0.0007, depth: 0.0011 } as const
 /** Time-of-flight scanner: separate emitter and receiver under one window. */
 export const TOF = {
-  ringR: 0.0128,
+  ringR: 0.0142,
   angleDeg: 18,
   emitter: { d: 0.0021, offsetDeg: -4.2, depth: 0.0008 },
   receiver: { d: 0.0026, offsetDeg: 4.2, depth: 0.0011 },
@@ -98,7 +97,7 @@ export const TOF = {
 } as const
 /** Medallion: polished metal inlay bonded under the cover glass. */
 export const MEDALLION = {
-  r: 0.0031,
+  r: 0.0034,
   z: -0.00012, // 0.12mm below the glass outer face
   thickness: 0.00008,
   ringWidth: 0.00008,

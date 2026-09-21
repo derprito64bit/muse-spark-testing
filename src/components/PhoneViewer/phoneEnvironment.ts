@@ -53,17 +53,43 @@ export function createStudioEnvironmentCanvas(): HTMLCanvasElement {
     ctx.restore()
   }
 
-  // The long softbox: large, slightly left of top centre. This panel draws
-  // the continuous specular line down the frame rail.
-  softRect(120, 30, 300, 150, '#dfe6f5', 45)
+  // The long softbox: compact and off-axis. A big panel washes the whole
+  // flat screen white (a second-phone read); a compact one draws a band
+  // that sweeps as the phone turns. Structure, not wash (Prompt C 5.1).
+  softRect(140, 40, 170, 90, '#dfe6f5', 40)
   // Core hotspot, small and off-axis: the dark mirror shows a bright band
   // sweeping across it, never a full-face wash.
-  softRect(150, 45, 120, 60, '#ffffff', 22)
+  softRect(165, 55, 70, 36, '#ffffff', 20)
 
   // The strip: narrow, bright, right of the key. Edge-on to the rail it
   // draws the second, tighter highlight on the chamfer faces.
-  softRect(640, 70, 42, 300, '#e6efff', 30)
-  softRect(648, 100, 26, 240, '#ffffff', 14)
+  softRect(650, 80, 30, 260, '#e6efff', 26)
+  softRect(656, 100, 18, 220, '#ffffff', 12)
+
+  // Horizon where the notional floor meets the wall, ~40% height: one value
+  // break the reflection can track as the phone rotates.
+  const horizon = ctx.createLinearGradient(0, 196, 0, 214)
+  horizon.addColorStop(0, 'rgba(120,140,190,0)')
+  horizon.addColorStop(0.5, 'rgba(120,140,190,0.28)')
+  horizon.addColorStop(1, 'rgba(120,140,190,0)')
+  ctx.fillStyle = horizon
+  ctx.fillRect(0, 196, 1024, 18)
+
+  // Distant practicals: tiny sharp glints that read glossy, not matte.
+  for (const [px, py, pr] of [
+    [80, 120, 4],
+    [900, 90, 3],
+    [500, 150, 5],
+    [980, 300, 3],
+  ] as const) {
+    const dot = ctx.createRadialGradient(px, py, 0, px, py, pr * 3)
+    dot.addColorStop(0, 'rgba(255,255,255,0.95)')
+    dot.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = dot
+    ctx.beginPath()
+    ctx.arc(px, py, pr * 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
   // The rim: cool, dim, low and wide so the silhouette separates without
   // reading as a stock render.

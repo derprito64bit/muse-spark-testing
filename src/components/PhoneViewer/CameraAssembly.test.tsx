@@ -18,7 +18,9 @@ describe('circular module layout', () => {
     expect(center.x).toBe(0)
     expect(center.y).toBeGreaterThan(0.03)
     expect(center.y).toBeLessThan(0.06)
-    expect(MODULE.outerR * 2).toBeLessThan(0.6 * 0.0768)
+    // Commanding but housed: under 65% of body width with 10mm top clearance.
+    expect(MODULE.outerR * 2).toBeLessThan(0.65 * 0.0768)
+    expect(center.y + MODULE.outerR).toBeLessThan(0.0798 - 0.009)
   })
 
   it('seats every round lens plus collar inside the cover glass', () => {
@@ -86,8 +88,8 @@ describe('circular module layout', () => {
     }
   })
 
-  it('knurls the outer wall with 168 teeth and tunes each coating differently', () => {
-    expect(COLLAR.outer.knurlTeeth).toBe(168)
+  it('knurls the outer wall with 192 teeth and tunes each coating differently', () => {
+    expect(COLLAR.outer.knurlTeeth).toBe(192)
     const hues = lensSpecs().map((s) => s.coatHue)
     expect(new Set(hues).size).toBe(hues.length)
   })

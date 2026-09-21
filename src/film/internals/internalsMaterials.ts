@@ -89,9 +89,11 @@ export function createInternalsMaterials(dressed = false): InternalsMaterialSet 
     ...transparent,
   })
   const cell = new MeshStandardMaterial({
-    color: new Color('#b9c1cc'),
-    roughness: 0.35,
-    metalness: 0.9,
+    // Mid-gray metallic, not bright silver: the cell is the largest part
+    // and at near-white it bricks over the whole x-ray read into one slab.
+    color: new Color('#6a7078'),
+    roughness: 0.5,
+    metalness: 0.85,
     ...transparent,
   })
   const cellGlow = new MeshStandardMaterial({

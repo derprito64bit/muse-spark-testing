@@ -1,5 +1,5 @@
 import { lensSpecs } from '../../../components/PhoneViewer/CameraAssembly.tsx'
-import { PERISCOPE } from '../../../components/PhoneViewer/phoneDimensions.ts'
+import { PERISCOPE, TOF } from '../../../components/PhoneViewer/phoneDimensions.ts'
 import { CAMERA_INTERNAL } from '../layout.ts'
 import type { InternalsMaterialSet } from '../internalsMaterials.ts'
 import type { PartRegister } from './register.ts'
@@ -55,7 +55,14 @@ export function OpticsPart({
         </mesh>
       </group>
       {/* ToF module behind its window, separating on its own delay */}
-      <group ref={register('tof-module')} position={[cx + 0.0122, cy + 0.004, cz]}>
+      <group
+        ref={register('tof-module')}
+        position={[
+          cx + TOF.ringR * Math.cos((TOF.angleDeg * Math.PI) / 180),
+          cy + TOF.ringR * Math.sin((TOF.angleDeg * Math.PI) / 180),
+          cz,
+        ]}
+      >
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <boxGeometry args={[0.0082, 0.0034, 0.0012]} />
           <primitive object={materials.housing} attach="material" />

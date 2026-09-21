@@ -91,7 +91,7 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   const panelW = DIM.w - BEZEL * 2
   const panelH = DIM.h - BEZEL * 2
   add('backSlab', tris(createSlabGeometry(panelW, panelH, BACK_PANEL.depth, 0.0013)))
-  add('glassSlab', tris(createSlabGeometry(panelW, panelH, FRONT_GLASS.depth, 0.0011)))
+  add('glassSlab', tris(createSlabGeometry(panelW, panelH, FRONT_GLASS.depth, 0.0012)))
   add(
     'displaySlab',
     tris(
@@ -99,7 +99,7 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
         panelW - DISPLAY_INSET * 2,
         panelH - DISPLAY_INSET * 2,
         DISPLAY_PANEL.depth,
-        0.0006,
+        0.001,
         0.0001,
       ),
     ),

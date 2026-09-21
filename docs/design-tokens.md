@@ -6,24 +6,28 @@ Source of truth: `src/index.css` under `@theme`. No raw hex in components.
 
 | Token     | Value     | Use             |
 | --------- | --------- | --------------- |
-| `night`   | `#0a0a0c` | page background |
-| `surface` | `#0f1014` | cards, panels   |
-| `elev`    | `#16171c` | raised          |
-| `raise`   | `#1d2028` | topmost         |
+| `night`   | `#101220` | page background |
+| `surface` | `#151823` | cards, panels   |
+| `elev`    | `#1c2030` | raised          |
+| `raise`   | `#242a3d` | topmost         |
 
-Four steps, each a measurable step apart in lightness.
+Four steps, each a measurable step apart in lightness. Lifted 2026-09-21
+from near-black to blue-graphite so titanium edges and the aether-blue
+accent read against the page; the film stage keeps its own near-black
+scrim for device contrast. A fixed aurora wash (key-blue top-left, faint
+ember bottom-right) sits behind everything at negligible alpha.
 
-## Contrast (measured 2026-09-19, WCAG relative luminance)
+## Contrast (measured 2026-09-21, WCAG relative luminance)
 
 | Foreground                | Background | Ratio   | Requirement        | Result                          |
 | ------------------------- | ---------- | ------- | ------------------ | ------------------------------- |
-| `ink` `#f2f2f4`           | `night`    | 17.69:1 | 7:1 primary        | pass                            |
-| `dim` `#9c9da7`           | `night`    | 7.34:1  | 4.5:1 secondary    | pass                            |
-| `faint` `#85868f`         | `night`    | 5.47:1  | 3:1 technical only | pass, non-essential labels only |
-| `aether` `#7fb4ff`        | `night`    | 9.30:1  | 4.5:1 live data    | pass                            |
-| `aether-strong` `#478dff` | `night`    | 6.14:1  | 4.5:1 focus/active | pass                            |
-| `ink`                     | `surface`  | 17.01:1 | 7:1                | pass                            |
-| `dim`                     | `surface`  | 7.06:1  | 4.5:1              | pass                            |
+| `ink` `#f2f2f4`           | `night`    | 16.63:1 | 7:1 primary        | pass                            |
+| `dim` `#a8adbf`           | `night`    | 8.32:1  | 4.5:1 secondary    | pass                            |
+| `faint` `#8f94a8`         | `night`    | 6.17:1  | 3:1 technical only | pass, non-essential labels only |
+| `aether` `#7fb4ff`        | `night`    | 8.74:1  | 4.5:1 live data    | pass                            |
+| `aether-strong` `#478dff` | `night`    | 5.77:1  | 4.5:1 focus/active | pass                            |
+| `ink`                     | `surface`  | 15.83:1 | 7:1                | pass                            |
+| `dim`                     | `surface`  | 7.92:1  | 4.5:1              | pass                            |
 
 `faint` never carries essential information. Text on glass must clear 4.5:1
 against the worst-case backdrop, which means an opaque scrim behind text.
