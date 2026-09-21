@@ -2,11 +2,11 @@ import * as THREE from 'three'
 import { superellipsePoints } from '../../lib/superellipse.ts'
 import {
   BEZEL,
+  BEZEL_SURFACE,
   BODY_N,
   CHAMFER,
   DIM,
   FRAME_BODY_DEPTH,
-  ISLAND_N,
   RING_BASE_Z,
   RING_DEPTH,
 } from './phoneDimensions.ts'
@@ -263,23 +263,50 @@ export function roundedRectLoop(
   return out
 }
 
-/** Superellipse camera pad. Set into the ceramic with a base fillet lip. */
-export function createPlateauGeometry(
-  half: number,
-  depth: number,
-  bevel: number,
+/**
+ * Circular module base (Prompt A2). Lathe profile with a smooth G1 base
+ * fillet into the rear panel: the pad-to-panel transition is one machined
+ * surface, not a flat chamfer. Bottom left open (seated inside the body).
+ */
+export function createModuleBaseGeometry(
+  radius: number,
+  height: number,
+  fillet: number,
+  segments = 96,
 ): THREE.BufferGeometry {
-  const shape = superellipseShape(half, half, ISLAND_N, 32)
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth,
-    bevelEnabled: bevel > 0,
-    bevelSize: bevel,
-    bevelThickness: bevel,
-    bevelSegments: 4,
-    curveSegments: 16,
-    steps: 1,
-  })
-  geometry.translate(0, 0, -depth / 2)
+  const points: THREE.Vector2[] = []
+  const steps = 12
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * (Math.PI / 2)
+    points.push(
+      new THREE.Vector2(radius - fillet + fillet * Math.sin(t), fillet - fillet * Math.cos(t)),
+    )
+  }
+  points.push(new THREE.Vector2(radius, height))
+  return new THREE.LatheGeometry(points, segments)
+}
+
+/**
+ * Display bezel ink ring: rounded-rect outline with a rounded-rect opening
+ * for the active area, feathered by the grain map's alpha falloff. Sits
+ * under the front glass (BEZEL_SURFACE.z) so the glass specular passes over
+ * it unbroken.
+ */
+export function createBezelGeometry(
+  outerW: number,
+  outerH: number,
+  outerR: number,
+  innerW: number,
+  innerH: number,
+  innerR: number,
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape()
+  roundedRectPath(shape, -outerW / 2, -outerH / 2, outerW, outerH, outerR)
+  const hole = new THREE.Path()
+  roundedRectPath(hole, -innerW / 2, -innerH / 2, innerW, innerH, innerR)
+  shape.holes.push(hole)
+  const geometry = new THREE.ShapeGeometry(shape, 16)
+  geometry.translate(0, 0, BEZEL_SURFACE.z)
   return geometry
 }
 

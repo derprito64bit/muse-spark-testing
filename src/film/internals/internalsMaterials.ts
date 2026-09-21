@@ -13,6 +13,8 @@ export interface InternalsMaterialSet {
   housing: MeshStandardMaterial
   coil: MeshStandardMaterial
   dark: MeshStandardMaterial
+  /** Coil status ring: charging indicator for the Clear finish. */
+  coilRing: MeshStandardMaterial
   /** Laser marking decal, low contrast. */
   dieMark: MeshBasicMaterial
   /** Floorplan detail overlay. */
@@ -31,6 +33,7 @@ export const INTERNALS_KEYS = [
   'housing',
   'coil',
   'dark',
+  'coilRing',
   'dieMark',
   'dieFloor',
 ] as const satisfies ReadonlyArray<keyof InternalsMaterialSet>
@@ -38,8 +41,12 @@ export const INTERNALS_KEYS = [
 /**
  * X-ray hardware material registry. All transparent from birth so the
  * opacity dissolve never triggers a shader recompile mid-film.
+ *
+ * Dressed mode serves the Clear finish (Prompt C section 3): brushed
+ * shield cans, brighter screw plating, copper coil saturation raised. Real
+ * transparent-back products dress their internals for display.
  */
-export function createInternalsMaterials(): InternalsMaterialSet {
+export function createInternalsMaterials(dressed = false): InternalsMaterialSet {
   const transparent = { transparent: true, opacity: 0 }
   const board = new MeshStandardMaterial({
     color: new Color('#0d2b26'),
@@ -56,14 +63,14 @@ export function createInternalsMaterials(): InternalsMaterialSet {
     ...transparent,
   })
   const shield = new MeshStandardMaterial({
-    color: new Color('#9aa2ad'),
-    roughness: 0.3,
+    color: new Color(dressed ? '#b8c0cc' : '#9aa2ad'),
+    roughness: dressed ? 0.22 : 0.3,
     metalness: 1,
     ...transparent,
   })
   const gold = new MeshStandardMaterial({
-    color: new Color('#d8a83e'),
-    roughness: 0.25,
+    color: new Color(dressed ? '#e8bc4e' : '#d8a83e'),
+    roughness: dressed ? 0.18 : 0.25,
     metalness: 1,
     ...transparent,
   })
@@ -102,9 +109,19 @@ export function createInternalsMaterials(): InternalsMaterialSet {
     ...transparent,
   })
   const coil = new MeshStandardMaterial({
-    color: new Color('#b06a28'),
+    color: new Color(dressed ? '#c97a2e' : '#b06a28'),
     roughness: 0.35,
     metalness: 1,
+    emissive: new Color(dressed ? '#2a1200' : '#000000'),
+    emissiveIntensity: dressed ? 0.4 : 0,
+    ...transparent,
+  })
+  const coilRing = new MeshStandardMaterial({
+    color: new Color('#0c1016'),
+    emissive: new Color('#8fc2ff'),
+    emissiveIntensity: 0.25,
+    roughness: 0.4,
+    metalness: 0,
     ...transparent,
   })
   const dark = new MeshStandardMaterial({
@@ -137,6 +154,7 @@ export function createInternalsMaterials(): InternalsMaterialSet {
     housing,
     coil,
     dark,
+    coilRing,
     dieMark,
     dieFloor,
   }

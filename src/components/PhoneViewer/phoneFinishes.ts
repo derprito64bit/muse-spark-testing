@@ -24,6 +24,10 @@ export interface FinishParams {
   envTint: string
   /** Local UI accent when selected. Must clear 4.5:1 on surface (tested). */
   uiAccent: string
+  /** Two-material rear panel split (Prompt A2 section 8). Only some colourways. */
+  panelSplit?: boolean
+  /** Smoked transparent rear over dressed internals (Prompt C section 3). */
+  transparentBack?: boolean
 }
 
 /** Pre-minted colors used for per-frame finish lerping without allocation. */
@@ -65,6 +69,13 @@ export const FINISH_COLORS: Record<
     island: new Color('#2a2d33'),
     antenna: new Color('#1c1e22'),
     accent: new Color('#9fb4ff'),
+  },
+  clear: {
+    frame: new Color('#9aa2ae'),
+    back: new Color('#121722'),
+    island: new Color('#1a2230'),
+    antenna: new Color('#6c737e'),
+    accent: new Color('#8fc2ff'),
   },
 }
 
@@ -140,6 +151,7 @@ export const FINISH_PARAMS: Record<FinishId, FinishParams> = {
     antennaColor: '#5c3a22',
     envTint: '#ffd9b8',
     uiAccent: '#ff9d5c',
+    panelSplit: true,
   },
   slate: {
     key: 'slate',
@@ -158,5 +170,25 @@ export const FINISH_PARAMS: Record<FinishId, FinishParams> = {
     antennaColor: '#1c1e22',
     envTint: '#ffffff',
     uiAccent: '#9fb4ff',
+    panelSplit: true,
+  },
+  clear: {
+    key: 'clear',
+    label: 'Clear',
+    family: 'glass',
+    backColor: '#121722',
+    backMetalness: 0,
+    backRoughness: 0.06,
+    backClearcoat: 1,
+    backClearcoatRoughness: 0.06,
+    grainAmplitude: 0.15,
+    islandColor: '#1a2230',
+    frameColor: '#9aa2ae',
+    frameRoughness: 0.3,
+    frameAnisotropy: 0.5,
+    antennaColor: '#6c737e',
+    envTint: '#eef4ff',
+    uiAccent: '#8fc2ff',
+    transparentBack: true,
   },
 }

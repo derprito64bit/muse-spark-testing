@@ -93,4 +93,20 @@ describe('product data consistency', () => {
       expect(contrastRatio(params.uiAccent, '#0f1014')).toBeGreaterThanOrEqual(4.5)
     }
   })
+
+  it('fits the data-layer capacity inside the modelled cell volume', () => {
+    // Prompt C section 2.4: the visible hardware must agree with the sheet.
+    const volumeCm3 = 5.8 * 7.8 * 0.42
+    const densityWhL = ((BATTERY.capacity / 1000) * 3.8) / (volumeCm3 / 1000)
+    expect(densityWhL).toBeGreaterThan(600)
+    expect(densityWhL).toBeLessThan(950)
+  })
+
+  it('matches the etched micro-text against the lens data', () => {
+    const byId = new Map(CAMERA_LENSES.map((l) => [l.id, l]))
+    expect(byId.get('main')?.aperture).toBe('f/1.6')
+    expect(byId.get('ultrawide')?.aperture).toBe('f/2.2')
+    expect(byId.get('mid')?.aperture).toBe('f/1.9')
+    expect(byId.get('periscope')?.aperture).toBe('f/3.0')
+  })
 })

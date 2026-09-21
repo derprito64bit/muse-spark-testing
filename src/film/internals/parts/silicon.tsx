@@ -2,11 +2,21 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import type { InternalsMaterialSet } from '../internalsMaterials.ts'
 import type { PartRegister } from './register.ts'
+import { BOARD_PARTS, MAIN_BOARD } from '../layout.ts'
+
+const SOC = BOARD_PARTS[0] as { x: number; y: number; w: number; h: number }
+const REAR_Z = MAIN_BOARD.cz - MAIN_BOARD.thickness / 2
+// Stack rear to front: die (rear, lifts toward the viewer), BGA balls,
+// substrate flush on the board rear face.
+const SUBSTRATE_Z = REAR_Z - 0.0004
+const BGA_Z = REAR_Z - 0.0009
+const DIE_Z = REAR_Z - 0.0015
 
 /**
- * A1 Ultra package as a real assembly: substrate with routing, instanced
- * BGA ball array revealed on lift, marked die with floorplan detail,
- * decoupling caps, perforated shield lid, and graphite thermal plate.
+ * A1 Ultra package at its manifest position (Prompt C section 2.2): substrate
+ * with routing, instanced BGA ball array revealed on lift, marked die with
+ * floorplan detail, decoupling caps. Rear faces -z, so rear-facing decals
+ * rotate PI about Y or the back viewer sees nothing.
  */
 export function SiliconPart({
   materials,
@@ -22,7 +32,7 @@ export function SiliconPart({
     let i = 0
     for (let r = 0; r < 14; r++) {
       for (let c = 0; c < 14; c++) {
-        m.setPosition(0.011 - 0.0065 + c * 0.001, 0.098 - 0.0065 + r * 0.001, 0.0005)
+        m.setPosition(SOC.x - 0.0065 + c * 0.001, SOC.y - 0.0065 + r * 0.001, BGA_Z)
         mesh.setMatrixAt(i, m)
         i += 1
       }
@@ -36,7 +46,7 @@ export function SiliconPart({
     const m = new THREE.Matrix4()
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2
-      m.setPosition(0.011 + Math.cos(a) * 0.0105, 0.098 + Math.sin(a) * 0.0105, 0.0014)
+      m.setPosition(SOC.x + Math.cos(a) * 0.0105, SOC.y + Math.sin(a) * 0.0105, REAR_Z - 0.0002)
       mesh.setMatrixAt(i, m)
     }
     mesh.instanceMatrix.needsUpdate = true
@@ -46,12 +56,12 @@ export function SiliconPart({
   return (
     <group userData={{ part: 'die', readout: 'A1 Ultra · 3 nm · 171 mm2' }}>
       <group ref={register('substrate')}>
-        <mesh position={[0.011, 0.098, 0.0012]}>
+        <mesh position={[SOC.x, SOC.y, SUBSTRATE_Z]}>
           <boxGeometry args={[0.016, 0.016, 0.0008]} />
           <primitive object={materials.substrate} attach="material" />
         </mesh>
-        {/* Additive circuit ring under focus */}
-        <mesh position={[0.011, 0.098, 0.0006]}>
+        {/* Additive circuit ring under focus, rear-facing */}
+        <mesh position={[SOC.x, SOC.y, SUBSTRATE_Z - 0.00041]} rotation={[0, Math.PI, 0]}>
           <ringGeometry args={[0.009, 0.0105, 48]} />
           <primitive object={materials.trace} attach="material" />
         </mesh>
@@ -60,44 +70,23 @@ export function SiliconPart({
         <primitive object={bga} />
       </group>
       <group ref={register('die')}>
-        <mesh position={[0.011, 0.098, 0.002]}>
+        <mesh position={[SOC.x, SOC.y, DIE_Z]}>
           <boxGeometry args={[0.011, 0.011, 0.0007]} />
           <primitive object={materials.die} attach="material" />
         </mesh>
-        {/* Laser marking decal, low contrast */}
-        <mesh position={[0.011, 0.098, 0.00236]}>
+        {/* Laser marking decal, low contrast, rear-facing */}
+        <mesh position={[SOC.x, SOC.y, DIE_Z - 0.00036]} rotation={[0, Math.PI, 0]}>
           <planeGeometry args={[0.009, 0.009]} />
           <primitive object={materials.dieMark} attach="material" />
         </mesh>
-        {/* Floorplan detail modulating the die top */}
-        <mesh position={[0.011, 0.098, 0.00237]}>
+        {/* Floorplan detail modulating the die rear face */}
+        <mesh position={[SOC.x, SOC.y, DIE_Z - 0.00037]} rotation={[0, Math.PI, 0]}>
           <planeGeometry args={[0.0105, 0.0105]} />
           <primitive object={materials.dieFloor} attach="material" />
         </mesh>
       </group>
       <group ref={register('decoupling-cluster')}>
         <primitive object={caps} />
-      </group>
-      {/* Perforated EMI shield lid above the package */}
-      <group ref={register('shield-lid')}>
-        <mesh position={[0.011, 0.098, 0.0042]}>
-          <boxGeometry args={[0.02, 0.02, 0.0004]} />
-          <primitive object={materials.shield} attach="material" />
-        </mesh>
-      </group>
-      {/* Graphite thermal plate above the shield */}
-      <group ref={register('thermal-plate')}>
-        <mesh position={[0.011, 0.098, 0.0052]}>
-          <boxGeometry args={[0.022, 0.022, 0.0003]} />
-          <primitive object={materials.dark} attach="material" />
-        </mesh>
-      </group>
-      {/* Graphite interface sheet, separates first */}
-      <group ref={register('graphite-sheet')}>
-        <mesh position={[0.011, 0.098, 0.0056]}>
-          <boxGeometry args={[0.024, 0.024, 0.00012]} />
-          <primitive object={materials.dark} attach="material" />
-        </mesh>
       </group>
     </group>
   )

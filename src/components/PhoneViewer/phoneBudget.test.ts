@@ -3,32 +3,35 @@ import * as THREE from 'three'
 import {
   BEZEL,
   CHAMFER,
-  ISLAND_FLASH,
-  ISLAND_LOWER,
-  ISLAND_N,
-  ISLAND_RANGE,
-  ISLAND_UPPER,
-  LENS_LAYOUT,
+  COLLAR,
   DIM,
   DISPLAY_INSET,
   DISPLAY_PANEL,
   BACK_PANEL,
   BACK_FACE,
+  FLASH_ARC,
   FRONT_GLASS,
+  GLASS_SEAL,
   GRILLE_SLOT,
+  LENSES,
   MIC_R,
+  MODULE,
+  MODULE_MIC,
+  PANEL_SPLIT,
+  PERISCOPE,
   PORT,
   SPEAKER_XS,
-  THREAD_RING,
+  TOF,
 } from './phoneDimensions.ts'
+import { buildMedallionGeometry } from './CameraAssembly.tsx'
 import {
+  createBezelGeometry,
   createFrameBodyGeometry,
   createFrameRingGeometry,
-  createPlateauGeometry,
+  createModuleBaseGeometry,
   createRoundedRectGeometry,
   createSlabGeometry,
 } from './phoneGeometry.ts'
-import { superellipsePoints } from '../../lib/superellipse.ts'
 
 /**
  * Triangle budget, Prompt A section 11. Every entry mirrors the constructor
@@ -111,29 +114,110 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   }
   add('panelGaps', box(DIM.w - 0.004, 0.00012, 0.0002, 2))
 
-  // Plateau module: base lip, two squircle tiers, instanced thread ring.
-  let dial = 0
-  dial += tris(createPlateauGeometry(ISLAND_LOWER.size / 2 + 0.0005, 0.0002, 0))
-  dial += tris(
-    createPlateauGeometry(ISLAND_LOWER.size / 2, ISLAND_LOWER.depth, CHAMFER.plateauStep),
+  // Circular module (Prompt A2): lathe base, two collar steps, seal,
+  // instanced knurl, three lens tunnels, periscope, arc flash, ToF, mic,
+  // iris medallion, bezel ring, worst-case panel split.
+  let module = 0
+  module += tris(createModuleBaseGeometry(MODULE.outerR, MODULE.proud, MODULE.baseFillet))
+  module += tris(
+    new THREE.CylinderGeometry(
+      COLLAR.outer.rOut,
+      COLLAR.outer.rOut,
+      COLLAR.outer.rise,
+      96,
+      1,
+      true,
+    ),
   )
-  dial += tris(
-    createPlateauGeometry(ISLAND_UPPER.size / 2, ISLAND_UPPER.depth, CHAMFER.plateauStep),
+  module += tris(new THREE.RingGeometry(COLLAR.outer.rIn, COLLAR.outer.rOut, 96))
+  module += tris(
+    new THREE.CylinderGeometry(
+      COLLAR.step.rOut,
+      COLLAR.step.rOut,
+      COLLAR.outer.rise - COLLAR.step.rise,
+      96,
+      1,
+      true,
+    ),
   )
+  module += tris(new THREE.RingGeometry(COLLAR.step.rIn, COLLAR.step.rOut, 96))
+  module += tris(
+    new THREE.TorusGeometry(
+      (GLASS_SEAL.rOut + GLASS_SEAL.rIn) / 2,
+      (GLASS_SEAL.rOut - GLASS_SEAL.rIn) / 2,
+      8,
+      96,
+    ),
+  )
+  module += tris(new THREE.CircleGeometry(COLLAR.glass.r, 96))
   if (detail === 'high') {
-    dial += tris(new THREE.BoxGeometry(0.00022, 0.00022, THREAD_RING.depth), THREAD_RING.teeth)
-    dial += tris(new THREE.BoxGeometry(0.00026, 0.00026, 0.0005), 3 * 40)
+    module += tris(
+      new THREE.BoxGeometry(COLLAR.outer.knurlDepth * 1.5, 0.00022, COLLAR.outer.rise * 0.8),
+      COLLAR.outer.knurlTeeth,
+    )
   }
-  // Squircle thread outline is dense by construction; assert it stays so.
-  expect(superellipsePoints(0.0167, 0.0167, ISLAND_N, 24)).toHaveLength(THREAD_RING.teeth)
-  for (const lens of LENS_LAYOUT) {
-    dial += lensTris(lens.r, lens.barrelDepth, detail === 'high' ? 2 : 1)
+  for (const lens of LENSES) {
+    module += lensTris(lens.r, lens.barrelDepth, detail === 'high' ? 2 : 1)
   }
-  dial += box(ISLAND_FLASH.w, ISLAND_FLASH.h, 0.0004)
-  dial += tris(new THREE.CircleGeometry(0.0011, 20), 2)
-  dial += tris(new THREE.CircleGeometry(ISLAND_RANGE.r, 24))
-  dial += tris(new THREE.RingGeometry(ISLAND_RANGE.r, ISLAND_RANGE.r + 0.0004, 24))
-  add('plateauModule', dial)
+  // Medallion iris: six extruded blades plus the hairline ring.
+  {
+    const dummy = new THREE.MeshBasicMaterial()
+    const medallion = buildMedallionGeometry(dummy, dummy)
+    let medallionTris = 0
+    medallion.traverse((child) => {
+      if (child instanceof THREE.Mesh) medallionTris += tris(child.geometry)
+    })
+    module += medallionTris
+    dummy.dispose()
+  }
+  // Periscope: cavity, window, prism, focus ring.
+  module += box(PERISCOPE.w, PERISCOPE.h, PERISCOPE.cavityDepth + 0.0002)
+  module += box(PERISCOPE.w, PERISCOPE.h, 0.00015)
+  module += tris(new THREE.PlaneGeometry(PERISCOPE.w * 0.9, PERISCOPE.h * 1.6))
+  if (detail === 'high') module += tris(new THREE.RingGeometry(0.0072, 0.0078, 40))
+  // Arc flash: diffuser plus two dies.
+  module += tris(
+    new THREE.RingGeometry(
+      FLASH_ARC.rIn,
+      FLASH_ARC.rOut,
+      24,
+      1,
+      0,
+      (FLASH_ARC.sweepDeg * Math.PI) / 180,
+    ),
+  )
+  module += tris(new THREE.CircleGeometry(0.0009, 16), FLASH_ARC.dies)
+  // ToF window plus emitter, receiver, sensor edge.
+  module += tris(createRoundedRectGeometry(TOF.window.w, TOF.window.h, TOF.window.r, 0.0002))
+  if (detail === 'high') {
+    module += tris(new THREE.CircleGeometry(TOF.emitter.d / 2, 20))
+    module += tris(new THREE.CircleGeometry(TOF.receiver.d / 2, 20))
+    module += tris(new THREE.PlaneGeometry(TOF.receiver.d * 0.55, TOF.receiver.d * 0.55))
+  }
+  module += tris(new THREE.CylinderGeometry(MODULE_MIC.d / 2, MODULE_MIC.d / 2, 0.0003, 12))
+  add('cameraModule', module)
+
+  // Bezel ink ring under the front glass.
+  add(
+    'bezel',
+    tris(
+      createBezelGeometry(
+        panelW,
+        panelH,
+        0.0011,
+        panelW - DISPLAY_INSET * 2,
+        panelH - DISPLAY_INSET * 2,
+        0.001,
+      ),
+    ),
+  )
+
+  // Panel split, worst case (Slate/Ember): seam groove plus proud lower panel.
+  add(
+    'panelSplit',
+    box(DIM.w - 0.004, PANEL_SPLIT.seamWidth, 0.0003) +
+      box(DIM.w - 0.004, PANEL_SPLIT.seamY + DIM.h / 2 - 0.002, 0.00024),
+  )
 
   // Edge hardware.
   let edge = 0

@@ -39,6 +39,10 @@ export interface FilmStates {
   focusPull: number
   /** 0..1 macro atmosphere presence in the closeup beats. */
   macroAtmos: number
+  /** 0..1 shield lids lifted, so board components are revealed. */
+  shieldLift: number
+  /** 0..1 coil LED ring brightness for the Clear finish. */
+  coilRing: number
 }
 
 /**
@@ -71,6 +75,8 @@ const STATES: FilmStates = {
   sectionCut: 0,
   focusPull: 0,
   macroAtmos: 0,
+  shieldLift: 0,
+  coilRing: 0,
 }
 
 /**
@@ -114,5 +120,10 @@ export function computeFilmStates(p: number): FilmStates {
     ramplike(p, 0.41, 0.43, 0.45, 0.47),
     ramplike(p, 0.66, 0.68, 0.7, 0.72),
   )
+  // Shield reveal runs inside the main explode so the lids come off after
+  // the outer layers clear and before reassembly starts. The coil ring
+  // follows the energy beat: it is the charging indicator.
+  STATES.shieldLift = ramplike(p, 0.315, 0.345, 0.47, 0.5)
+  STATES.coilRing = ramplike(p, 0.885, 0.9, 0.91, 0.93)
   return STATES
 }

@@ -2,7 +2,8 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 import type { FinishId } from '../../data/product.ts'
 import { DEFAULT_FINISH } from '../../data/product.ts'
 
-export type FocusLensId = 'main' | 'ultra' | 'tele'
+/** Fourth entry is the folded periscope: focusable like the round lenses. */
+export type FocusLensId = 'main' | 'ultra' | 'mid' | 'periscope'
 
 interface PhoneConfigValue {
   finish: FinishId

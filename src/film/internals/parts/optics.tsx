@@ -1,9 +1,16 @@
-import { LENS_LAYOUT } from '../../../components/PhoneViewer/phoneDimensions.ts'
-import { islandUpperCenter } from '../../../components/PhoneViewer/CameraAssembly.tsx'
+import { lensSpecs } from '../../../components/PhoneViewer/CameraAssembly.tsx'
+import { PERISCOPE } from '../../../components/PhoneViewer/phoneDimensions.ts'
+import { CAMERA_INTERNAL } from '../layout.ts'
 import type { InternalsMaterialSet } from '../internalsMaterials.ts'
 import type { PartRegister } from './register.ts'
 
-/** Rear optical housings mirroring the plateau module, seen from inside. */
+/**
+ * Internal camera housings over the layout manifest (Prompt C section 6):
+ * one main housing block matching the A2 module footprint, three round lens
+ * barrels on the triangle, the periscope block below, and the ToF module as
+ * its own exploding part. Positions line up with the exterior lenses the
+ * viewer just saw, or the exploded view will not read.
+ */
 export function OpticsPart({
   materials,
   register,
@@ -11,21 +18,25 @@ export function OpticsPart({
   materials: InternalsMaterialSet
   register: PartRegister
 }) {
-  const center = islandUpperCenter()
+  const specs = lensSpecs()
+  const { cx, cy, cz, r } = CAMERA_INTERNAL
   return (
-    <group userData={{ part: 'optics', readout: '50 MP main · 1/1.3 in sensor' }}>
-      <group ref={register('sensor-stack')}>
-        <mesh position={[center.x, center.y, -0.001]}>
-          <cylinderGeometry args={[0.0131, 0.0131, 0.0024, 48]} />
+    <group userData={{ part: 'optics', readout: '135 mm folded periscope' }}>
+      {/* Main housing block: the module footprint, seen from inside */}
+      <group ref={register('camera-module')}>
+        <mesh position={[cx, cy, cz]}>
+          <cylinderGeometry args={[r * 0.92, r * 0.92, 0.0022, 48]} />
           <primitive object={materials.housing} attach="material" />
         </mesh>
       </group>
-      {LENS_LAYOUT.map((lens) => (
-        <group
-          key={lens.key}
-          ref={register(`lens-${lens.key}`)}
-          position={[center.x + lens.dx, center.y + lens.dy, -0.001]}
-        >
+      <group ref={register('sensor-stack')}>
+        <mesh position={[cx, cy, cz + 0.0014]}>
+          <cylinderGeometry args={[0.0131, 0.0131, 0.0012, 48]} />
+          <primitive object={materials.housing} attach="material" />
+        </mesh>
+      </group>
+      {specs.map((lens) => (
+        <group key={lens.key} ref={register(`lens-${lens.key}`)} position={[lens.x, lens.y, cz]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[lens.r, lens.r * 1.1, 0.0024, 24]} />
             <primitive object={materials.housing} attach="material" />
@@ -36,6 +47,20 @@ export function OpticsPart({
           </mesh>
         </group>
       ))}
+      {/* Periscope block below the triangle, matching the exterior window */}
+      <group ref={register('lens-periscope')} position={[cx + PERISCOPE.x, cy + PERISCOPE.y, cz]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[PERISCOPE.w, PERISCOPE.h, 0.0026]} />
+          <primitive object={materials.housing} attach="material" />
+        </mesh>
+      </group>
+      {/* ToF module behind its window, separating on its own delay */}
+      <group ref={register('tof-module')} position={[cx + 0.0122, cy + 0.004, cz]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[0.0082, 0.0034, 0.0012]} />
+          <primitive object={materials.housing} attach="material" />
+        </mesh>
+      </group>
     </group>
   )
 }

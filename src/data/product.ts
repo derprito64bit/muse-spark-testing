@@ -1,4 +1,4 @@
-export type FinishId = 'obsidian' | 'titanium' | 'glacier' | 'ember' | 'slate'
+export type FinishId = 'obsidian' | 'titanium' | 'glacier' | 'ember' | 'slate' | 'clear'
 
 export interface Finish {
   id: FinishId
@@ -12,6 +12,10 @@ export interface Finish {
   swatch: string
   /** CSS gradient used for the titanium frame surrounding the phone. */
   frame: string
+  /** Two-material rear panel split (Prompt A2 section 8). Only some colourways. */
+  panelSplit?: boolean
+  /** Transparent smoked rear panel over dressed internals (Prompt C section 3). */
+  transparentBack?: boolean
 }
 
 export const FINISHES: Finish[] = [
@@ -53,6 +57,7 @@ export const FINISHES: Finish[] = [
     image: '/images/finishes/ember.svg',
     swatch: 'linear-gradient(145deg,#e8a06a 0%,#4a2e1a 55%,#241209 100%)',
     frame: 'linear-gradient(160deg, rgba(255,220,180,0.4), rgba(255,220,180,0.08) 45%, #6a4a2e)',
+    panelSplit: true,
   },
   {
     id: 'slate',
@@ -62,6 +67,18 @@ export const FINISHES: Finish[] = [
     image: '/images/finishes/slate.svg',
     swatch: 'linear-gradient(145deg,#6a6e76 0%,#232529 55%,#101114 100%)',
     frame: 'linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.04) 45%, #43464e)',
+    panelSplit: true,
+  },
+  {
+    id: 'clear',
+    name: 'Clear',
+    tagline: 'Smoked glass over dressed internals.',
+    description:
+      'A smoked transparent rear panel showing the dressed assembly inside, ringed by a coil-status light. Shows internal components.',
+    image: '/images/finishes/clear.svg',
+    swatch: 'linear-gradient(145deg,#8fc2ff33 0%,#121722 55%,#3a4a63 100%)',
+    frame: 'linear-gradient(160deg, rgba(255,255,255,0.35), rgba(255,255,255,0.06) 45%, #9aa2ae)',
+    transparentBack: true,
   },
 ]
 
@@ -100,7 +117,7 @@ export interface CameraLens {
 export const CAMERA_LENSES: CameraLens[] = [
   {
     id: 'main',
-    label: 'Main',
+    label: 'Main · 23mm',
     zoom: '1x',
     mp: 50,
     detail: '1/1.3 in sensor, f/1.6, OIS, dual-pixel AF',
@@ -111,24 +128,35 @@ export const CAMERA_LENSES: CameraLens[] = [
   },
   {
     id: 'ultrawide',
-    label: 'Ultra-wide',
+    label: 'Ultra-wide · 14mm',
     zoom: '0.5x',
     mp: 48,
-    detail: '122 deg field of view, macro capable',
+    detail: '14 mm equiv, 122 deg field of view, macro capable',
     spec: '48 MP · 122 deg',
     sensor: '1/2.4 in',
     aperture: 'f/2.2',
     stabilization: 'EIS',
   },
   {
-    id: 'telephoto',
-    label: 'Telephoto',
+    id: 'mid',
+    label: 'Mid · 50mm',
+    zoom: '2x',
+    mp: 50,
+    detail: '50 mm equiv portrait lens, f/1.9, OIS',
+    spec: '50 MM · F/1.9',
+    sensor: '1/2 in',
+    aperture: 'f/1.9',
+    stabilization: 'OIS',
+  },
+  {
+    id: 'periscope',
+    label: 'Periscope · 135mm',
     zoom: '5x',
     mp: 50,
-    detail: '5x optical, 10x hybrid, OIS',
-    spec: '5x OPTICAL · 10x HYBRID',
+    detail: '135 mm equiv folded optic, f/3.0, OIS',
+    spec: '135 MM · F/3.0',
     sensor: '1/2.5 in',
-    aperture: 'f/2.8',
+    aperture: 'f/3.0',
     stabilization: 'OIS',
   },
   {
@@ -152,11 +180,11 @@ export interface FocalLength {
 
 /** Five focal lengths drive the interactive camera showcase. Images are local SVGs. */
 export const FOCAL_LENGTHS: FocalLength[] = [
-  { zoom: '0.5x', image: '/images/camera/scene-ultra.svg', note: 'Ultra-wide' },
-  { zoom: '1x', image: '/images/camera/scene-main.svg', note: 'Main lens' },
-  { zoom: '2x', image: '/images/camera/scene-zoom2.svg', note: 'Sensor crop' },
-  { zoom: '5x', image: '/images/camera/scene-tele5.svg', note: 'Optical tele' },
-  { zoom: '10x', image: '/images/camera/scene-tele10.svg', note: 'Hybrid tele' },
+  { zoom: '0.5x', image: '/images/camera/scene-ultra.svg', note: 'Ultra-wide · 14mm' },
+  { zoom: '1x', image: '/images/camera/scene-main.svg', note: 'Main lens · 23mm' },
+  { zoom: '2x', image: '/images/camera/scene-zoom2.svg', note: 'Mid lens · 50mm' },
+  { zoom: '5x', image: '/images/camera/scene-tele5.svg', note: 'Periscope · 135mm' },
+  { zoom: '10x', image: '/images/camera/scene-tele10.svg', note: 'Hybrid zoom' },
 ]
 
 export type SoCKey = 'cpu' | 'gpu' | 'npu'
@@ -252,7 +280,9 @@ export const MEMORY = {
 }
 
 export const BATTERY = {
-  capacity: 5200,
+  // 0.058 x 0.078 x 0.0042 m = 19 cm3; 4000 mAh at 3.8 V is 15.2 Wh,
+  // about 800 Wh/L, plausible for silicon-carbon (Prompt C section 2.4).
+  capacity: 4000,
   wired: 100,
   wireless: 40,
   reverse: 15,
@@ -342,9 +372,10 @@ export const SPEC_CATEGORIES: SpecCategory[] = [
   {
     label: 'Cameras',
     rows: [
-      { label: 'Main', value: '50 MP · 1/1.3 in, f/1.6, OIS, dual-pixel AF' },
-      { label: 'Ultra-wide', value: '48 MP · 122 deg, macro' },
-      { label: 'Telephoto', value: '50 MP · 5x optical, 10x hybrid, OIS' },
+      { label: 'Main', value: '50 MP · 23 mm, 1/1.3 in, f/1.6, OIS, dual-pixel AF' },
+      { label: 'Ultra-wide', value: '48 MP · 14 mm, 122 deg, macro' },
+      { label: 'Mid', value: '50 MP · 50 mm portrait, f/1.9, OIS' },
+      { label: 'Periscope', value: '50 MP · 135 mm folded optic, f/3.0, OIS' },
       { label: 'Front', value: '32 MP · autofocus, 4K60' },
       { label: 'Video', value: '8K30 · cinematic mode' },
       { label: 'Capture', value: 'RAW · computational photography' },
@@ -352,7 +383,7 @@ export const SPEC_CATEGORIES: SpecCategory[] = [
   },
   {
     label: 'Battery',
-    rows: [{ label: 'Capacity', value: '5200 mAh' }],
+    rows: [{ label: 'Capacity', value: '4000 mAh' }],
   },
   {
     label: 'Charging',

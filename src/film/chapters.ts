@@ -71,11 +71,11 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     act: 'camera',
-    kicker: 'Triple camera',
+    kicker: 'Quad camera',
     headline: 'Five focal lengths.',
     body: CAMERA_LENSES[0]?.detail ?? '',
     numeral: { value: String(CAMERA_LENSES[0]?.mp ?? 50), unit: 'MP main' },
-    spec: [`${CAMERA_LENSES[1]?.mp ?? 48} MP ultra-wide`, `${CAMERA_LENSES[2]?.detail ?? ''}`],
+    spec: [`${CAMERA_LENSES[1]?.mp ?? 48} MP ultra-wide`, `${CAMERA_LENSES[3]?.detail ?? ''}`],
   },
   {
     act: 'display',
@@ -118,37 +118,69 @@ export const CHAPTERS: Chapter[] = [
     act: 'final',
     kicker: 'Aether One X',
     headline: 'Choose your finish.',
-    body: 'Five finishes, three capacities. Configure below.',
+    body: 'Six finishes, three capacities. Configure below.',
   },
 ]
 
 /**
- * Exploded-diagram callouts (Prompt B section 6). Copy lives here as data,
- * never inline in JSX. Every figure is imported from src/data so the film
- * and the specifications page can never disagree.
+ * Exploded-diagram callouts (Prompt C section 4.6). Nine labels maximum:
+ * only parts a general audience can care about. Screws, coax, RF modules,
+ * and connectors are texture, not information, and stay unlabeled. Copy
+ * lives here as data, never inline in JSX.
  */
 export const CALLOUTS: CalloutDef[] = [
   {
     partId: 'die',
     title: CHIPSET.name,
-    body: `${CHIPSET.processNm} nm · ${CHIPSET.dieAreaMm2} mm²`,
+    body: `${CHIPSET.processNm} nm · ${CHIPSET.dieAreaMm2} mm² · runs every model on-device`,
     priority: 1,
   },
   {
     partId: 'bga-array',
     title: 'BGA array',
     body: '14 × 14 balls · revealed on lift',
+    priority: 5,
+  },
+  {
+    partId: 'nand',
+    title: 'Storage',
+    body: `${STORAGE_OPTIONS[2]?.label ?? '1 TB'} UFS 4.1 · keeps a decade of photos`,
+    priority: 6,
+  },
+  {
+    partId: 'cell',
+    title: 'Silicon-carbon cell',
+    body: `${BATTERY.capacity} mAh · two-day reserve`,
+    priority: 2,
+  },
+  {
+    partId: 'charge-coil',
+    title: 'Wireless coil',
+    body: `${BATTERY.wireless} W · 18-turn litz · charges through the case`,
     priority: 4,
   },
-  { partId: 'cell', title: 'Silicon-carbon cell', body: `${BATTERY.capacity} mAh`, priority: 2 },
-  { partId: 'charge-coil', title: 'Wireless coil', body: '40 W', priority: 5 },
   {
-    partId: 'lens-main',
-    title: 'Main camera',
-    body: `${CAMERA_LENSES[0]?.mp ?? 50} MP`,
+    partId: 'vapor-chamber',
+    title: 'Vapour chamber',
+    body: 'pulls heat off the A1 Ultra · sustains peak clocks',
+    priority: 7,
+  },
+  {
+    partId: 'haptic',
+    title: 'Haptic motor',
+    body: 'X-axis linear actuator · clicks, never buzzes',
+    priority: 8,
+  },
+  {
+    partId: 'speaker',
+    title: 'Speaker',
+    body: 'bottom-firing driver · tuned against the port',
+    priority: 9,
+  },
+  {
+    partId: 'camera-module',
+    title: 'Camera module',
+    body: `${CAMERA_LENSES.length - 1} optics · ${CAMERA_LENSES[3]?.label ?? '135 mm folded tele'}`,
     priority: 3,
   },
-  { partId: 'lens-tele', title: 'Telephoto', body: CAMERA_LENSES[2]?.detail ?? '', priority: 6 },
-  { partId: 'shield-lid', title: 'EMI shield', body: 'lifts off first', priority: 7 },
-  { partId: 'graphite-sheet', title: 'Graphite sheet', body: 'spreads the heat', priority: 8 },
 ]

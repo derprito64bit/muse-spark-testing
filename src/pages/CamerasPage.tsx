@@ -15,14 +15,14 @@ export function CamerasPage() {
     <>
       <Head
         title="Cameras — Aether One X"
-        description="Fictional triple camera. Five focal lengths."
+        description="Fictional quad camera. Five focal lengths."
         path="/cameras"
         image="/og/cameras.svg"
       />
       <PageHero
         kicker="Cameras"
         title="Every focal length."
-        lede="Main, ultra-wide, and 5x telephoto. Demonstration values throughout."
+        lede="Main 23mm, ultra-wide 14mm, mid 50mm, and a 135mm folded periscope. Demonstration values throughout."
       />
       <PhoneConfigProvider>
         <FocalStrip onZoom={setZoom} />

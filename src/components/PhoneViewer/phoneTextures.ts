@@ -291,3 +291,213 @@ export function createSubpixelTexture(): CanvasTexture {
   texture.repeat.set(24, 24)
   return texture
 }
+
+/**
+ * Medallion micro-detail (Prompt A2 section 4.3, path B): fine radial brush
+ * marks for the blade faces plus a slightly smoother ring band. Roughness
+ * domain only; the iris shape itself is real geometry.
+ */
+export function createMedallionTexture(): CanvasTexture {
+  const S = 256
+  const { canvas, ctx } = makeCanvas(S, S)
+  if (ctx !== null) {
+    ctx.fillStyle = '#3a3a3a'
+    ctx.fillRect(0, 0, S, S)
+    const rng = seededRng(168 * 7919)
+    // Radial brushing: many short arcs at random radii, low contrast.
+    for (let i = 0; i < 420; i++) {
+      const r = 12 + rng() * 112
+      const a0 = rng() * Math.PI * 2
+      const sweep = 0.05 + rng() * 0.22
+      const v = 40 + Math.floor(rng() * 40)
+      ctx.strokeStyle = `rgba(${v},${v},${v},0.5)`
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(S / 2, S / 2, r, a0, a0 + sweep)
+      ctx.stroke()
+    }
+    // Ring band slightly smoother (darker = lower roughness).
+    ctx.strokeStyle = 'rgba(28,28,28,0.9)'
+    ctx.lineWidth = 7
+    ctx.beginPath()
+    ctx.arc(S / 2, S / 2, S / 2 - 6, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  return dataFromCanvas(canvas, 4)
+}
+
+/**
+ * Collar arc text (Prompt A2 section 5.1/5.3): 2048 annular map in the
+ * roughness domain. Laser etching scatters, so glyphs read rougher
+ * (brighter) than the polished base. RingGeometry UVs are planar over the
+ * disc, so canvas pixels map linearly: pixel radius = r / (2 * rOut) * S.
+ * flipY puts canvas row 0 at +y; glyph angles compensate.
+ */
+export function createCollarTextTexture(
+  partner: string,
+  rIn: number,
+  rOut: number,
+  notchAngleDeg = 90,
+): CanvasTexture {
+  const S = 2048
+  const { canvas, ctx } = makeCanvas(S, S)
+  const px = (r: number): number => (r / (2 * rOut)) * S
+  const bandR = px((rIn + rOut) / 2)
+  if (ctx !== null) {
+    ctx.fillStyle = '#232323'
+    ctx.fillRect(0, 0, S, S)
+    ctx.fillStyle = '#8f8f8f'
+    ctx.strokeStyle = '#8f8f8f'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    // Partner name on the lower-left arc: 50 degrees centred at 225.
+    const word = partner.split('')
+    const spanDeg = 50
+    const centerDeg = 225
+    const sizePx = (px(rOut) - px(rIn)) * 0.52
+    ctx.font = `600 ${Math.round(sizePx)}px "Helvetica Neue", Arial, sans-serif`
+    word.forEach((glyph, i) => {
+      const t = word.length <= 1 ? 0.5 : i / (word.length - 1)
+      const deg = centerDeg - spanDeg / 2 + t * spanDeg
+      const rad = (deg * Math.PI) / 180
+      // Canvas y flips: ring angle θ lands at canvas angle -θ.
+      const x = S / 2 + bandR * Math.cos(rad)
+      const y = S / 2 - bandR * Math.sin(rad)
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(-(rad - Math.PI / 2))
+      ctx.fillText(glyph, 0, 0)
+      ctx.restore()
+    })
+    // Engraved index notch at 12 o'clock (ring angle 90).
+    const nRad = (notchAngleDeg * Math.PI) / 180
+    const nx = S / 2 + bandR * Math.cos(nRad)
+    const ny = S / 2 - bandR * Math.sin(nRad)
+    ctx.save()
+    ctx.translate(nx, ny)
+    ctx.rotate(-(nRad - Math.PI / 2))
+    ctx.lineWidth = Math.max(3, sizePx * 0.12)
+    ctx.beginPath()
+    ctx.moveTo(0, -sizePx * 0.5)
+    ctx.lineTo(0, sizePx * 0.5)
+    ctx.stroke()
+    ctx.restore()
+  }
+  const texture = dataFromCanvas(canvas, 8)
+  texture.anisotropy = 8
+  return texture
+}
+
+/** Per-optic micro-text on the cover glass (Prompt A2 section 5.2). */
+export interface MicroTextItem {
+  text: string
+  /** Glass-local meters from the glass centre. */
+  x: number
+  y: number
+}
+
+/**
+ * Flat 1024 map for the cover-glass micro-text, roughness domain.
+ * CircleGeometry UVs are planar over the disc: pixel = (pos / (2r) + 0.5) S.
+ */
+export function createMicroTextTexture(items: MicroTextItem[], glassR: number): CanvasTexture {
+  const S = 1024
+  const { canvas, ctx } = makeCanvas(S, S)
+  if (ctx !== null) {
+    ctx.fillStyle = '#1e1e1e'
+    ctx.fillRect(0, 0, S, S)
+    ctx.fillStyle = '#7d7d7d'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = `500 26px ui-monospace, monospace`
+    for (const item of items) {
+      const x = (item.x / (2 * glassR) + 0.5) * S
+      const y = (item.y / (2 * glassR) + 0.5) * S
+      // flipY: canvas row 0 is +y.
+      ctx.fillText(item.text, x, S - y)
+    }
+  }
+  return dataFromCanvas(canvas, 8)
+}
+
+/**
+ * Knurl LOD1 maps (Prompt A2 section 6): a repeating wedge normal map plus
+ * a matching roughness map for a plain cylinder wall. Correct beyond ~25cm.
+ */
+export function createKnurlMaps(): { normal: CanvasTexture; rough: CanvasTexture } {
+  const W = 256
+  const H = 64
+  const n = makeCanvas(W, H)
+  const r = makeCanvas(W, H)
+  const nctx = n.ctx
+  const rctx = r.ctx
+  if (nctx !== null && rctx !== null) {
+    const nImg = nctx.createImageData(W, H)
+    const rImg = rctx.createImageData(W, H)
+    // One wedge per 16px: triangle-wave height, normals from the slope.
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const phase = (((x % 16) + 16) % 16) / 16
+        const h = phase < 0.5 ? phase * 2 : 2 - phase * 2
+        const slope = phase < 0.5 ? 1 : -1
+        const inv = 1 / Math.hypot(slope * 2.2, 1)
+        const i = (y * W + x) * 4
+        nImg.data[i] = Math.round((-slope * 2.2 * inv * 0.5 + 0.5) * 255)
+        nImg.data[i + 1] = 128
+        nImg.data[i + 2] = Math.round((inv * 0.5 + 0.5) * 255)
+        nImg.data[i + 3] = 255
+        const g = Math.round((110 + h * 90) * 1)
+        rImg.data[i] = g
+        rImg.data[i + 1] = g
+        rImg.data[i + 2] = g
+        rImg.data[i + 3] = 255
+      }
+    }
+    nctx.putImageData(nImg, 0, 0)
+    rctx.putImageData(rImg, 0, 0)
+  }
+  const normal = new CanvasTexture(n.canvas)
+  normal.colorSpace = NoColorSpace
+  normal.wrapS = RepeatWrapping
+  normal.wrapT = RepeatWrapping
+  const rough = dataFromCanvas(r.canvas, 4)
+  rough.wrapS = RepeatWrapping
+  rough.wrapT = RepeatWrapping
+  return { normal, rough }
+}
+
+/**
+ * Bezel ink grain (Prompt A2 section 7): fine matte grain, high frequency,
+ * low amplitude. The alpha feather at the active-area edge is baked into
+ * the alpha channel: 0.12mm gradient from the printing process.
+ */
+export function createBezelGrainTexture(
+  w: number,
+  h: number,
+  featherPx: number,
+  insetXPx: number,
+  insetYPx: number,
+): CanvasTexture {
+  const { canvas, ctx } = makeCanvas(w, h)
+  if (ctx !== null) {
+    ctx.fillStyle = '#d2d2d2'
+    ctx.fillRect(0, 0, w, h)
+    const rng = seededRng(145 * 7919)
+    for (let i = 0; i < w * h * 0.04; i++) {
+      const v = 165 + Math.floor(rng() * 60)
+      ctx.fillStyle = `rgba(${v},${v},${v},0.6)`
+      ctx.fillRect(Math.floor(rng() * w), Math.floor(rng() * h), 1, 1)
+    }
+    // Feather: erase the active-area opening with a soft edge.
+    ctx.save()
+    ctx.globalCompositeOperation = 'destination-out'
+    ctx.shadowColor = 'rgba(0,0,0,1)'
+    ctx.shadowBlur = featherPx
+    ctx.fillRect(insetXPx, insetYPx, w - insetXPx * 2, h - insetYPx * 2)
+    ctx.restore()
+  }
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = NoColorSpace
+  texture.anisotropy = 4
+  return texture
+}

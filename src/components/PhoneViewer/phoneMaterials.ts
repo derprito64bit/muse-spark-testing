@@ -1,12 +1,18 @@
 import { Color, MeshPhysicalMaterial, type MeshPhysicalMaterialParameters } from 'three'
 import { FINISH_PARAMS, type FinishParams } from './phoneFinishes.ts'
+import { BEZEL, COLLAR, DIM, OPTICS_PARTNER } from './phoneDimensions.ts'
 import {
   createBarrelGradientMap,
+  createBezelGrainTexture,
   createBrushTexture,
   createCeramicMottleTexture,
   createCoatingThicknessMap,
+  createCollarTextTexture,
+  createKnurlMaps,
   createLensGlossMap,
   createLogoTexture,
+  createMedallionTexture,
+  createMicroTextTexture,
   createRegulatoryTexture,
   createScreenGradientTexture,
   createScreenTexture,
@@ -74,12 +80,48 @@ export interface PhoneMaterialSet {
   antenna: MeshPhysicalMaterial
   /** SIM tray strip. */
   simTray: MeshPhysicalMaterial
-  /** Flash module collar. */
-  flashRing: MeshPhysicalMaterial
-  /** Flash LED face. */
+  /** Outer collar wall: knurled, machined. */
+  collarOuter: MeshPhysicalMaterial
+  /** Outer collar top face: polished, carries the etched partner arc text. */
+  collarTop: MeshPhysicalMaterial
+  /** Plain collar wall with baked knurl maps (LOD1). */
+  knurlWall: MeshPhysicalMaterial
+  /** Step ring: matte bead-blasted, not polished. */
+  collarStep: MeshPhysicalMaterial
+  /** Dark seal groove where cover glass meets the step. */
+  glassSeal: MeshPhysicalMaterial
+  /** Domed module cover glass with per-optic micro-text. */
+  moduleGlass: MeshPhysicalMaterial
+  /** Polished iris inlay under the glass, much sharper than the collar. */
+  medallion: MeshPhysicalMaterial
+  /** Medallion hairline ring. */
+  medallionRing: MeshPhysicalMaterial
+  /** Folded-optic window pane. */
+  periscopeGlass: MeshPhysicalMaterial
+  /** Angled prism floor inside the periscope cavity. */
+  periscopePrism: MeshPhysicalMaterial
+  /** Flash LED dies behind the diffuser. */
+  flashArc: MeshPhysicalMaterial
+  /** Flash diffuser arc in the step ring. */
+  flashDiffuser: MeshPhysicalMaterial
+  /** ToF IR-pass filter window. Near-black but not flat. */
+  tofWindow: MeshPhysicalMaterial
+  /** ToF emitter aperture, slightly brighter than the receiver. */
+  tofEmitter: MeshPhysicalMaterial
+  /** ToF receiver aperture with square sensor edge. */
+  tofReceiver: MeshPhysicalMaterial
+  /** ToF housing bridge between the apertures. */
+  tofHousing: MeshPhysicalMaterial
+  /** Module microphone dot. */
+  moduleMic: MeshPhysicalMaterial
+  /** Display bezel: matte ink under the glass, feathered at the active area. */
+  bezel: MeshPhysicalMaterial
+  /** Lower rear panel, textured family, on split finishes. */
+  panelLower: MeshPhysicalMaterial
+  /** Panel split seam groove, self-shadowing. */
+  panelSeam: MeshPhysicalMaterial
+  /** Punch-hole glint and LED faces. */
   flashGlass: MeshPhysicalMaterial
-  /** Rangefinder cover: dark red-tinted glass. */
-  rangeGlass: MeshPhysicalMaterial
 }
 
 export const MATERIAL_KEYS = [
@@ -110,9 +152,27 @@ export const MATERIAL_KEYS = [
   'speaker',
   'antenna',
   'simTray',
-  'flashRing',
+  'collarOuter',
+  'collarTop',
+  'knurlWall',
+  'collarStep',
+  'glassSeal',
+  'moduleGlass',
+  'medallion',
+  'medallionRing',
+  'periscopeGlass',
+  'periscopePrism',
+  'flashArc',
+  'flashDiffuser',
+  'tofWindow',
+  'tofEmitter',
+  'tofReceiver',
+  'tofHousing',
+  'moduleMic',
+  'bezel',
+  'panelLower',
+  'panelSeam',
   'flashGlass',
-  'rangeGlass',
 ] as const satisfies ReadonlyArray<keyof PhoneMaterialSet>
 
 /** The four rail instances, updated as one in the finish lerp. */
@@ -196,12 +256,15 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
   const screen = makeMaterial({
     color: new Color('#06080d'),
     metalness: 0,
-    roughness: 0.045,
+    roughness: 0.06,
     roughnessMap: smudge,
     map: createScreenGradientTexture(),
     clearcoat: 1,
-    clearcoatRoughness: 0.045,
-    envMapIntensity: 0.95,
+    clearcoatRoughness: 0.06,
+    // Kept below the mirror clip: at 0.95 the softbox panel burned to full
+    // white and read as a second phone overlapping the first. The arrival
+    // sweep still plays through the directional key, not the env map.
+    envMapIntensity: 0.55,
   })
   const display = makeMaterial({
     color: new Color('#02040a'),
@@ -214,10 +277,12 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
     envMapIntensity: 0.5,
   })
   const lensRing = makeMaterial({
-    color: new Color('#c9d2de'),
+    // Dark machined collar: bright metal blew out flat-on in the camera act.
+    // Dark walls keep the module reading black while chamfers carry the line.
+    color: new Color('#3a3f47'),
     metalness: 1,
-    roughness: 0.2,
-    envMapIntensity: 1,
+    roughness: 0.32,
+    envMapIntensity: 0.9,
   })
   const makeLensGlass = (tint: string, thickness: [number, number]): MeshPhysicalMaterial =>
     makeMaterial({
@@ -231,7 +296,13 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
       iridescenceIOR: 1.32,
       iridescenceThicknessRange: thickness,
       iridescenceThicknessMap: coating,
-      envMapIntensity: 1.9,
+      // Translucent: the barrel tunnel, baffles, and element read through
+      // dimmed instead of rendering as a dark sticker. The director must
+      // respect this base opacity (see BASE_OPACITY), not stomp it to 1.
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      envMapIntensity: 1.1,
     })
   const lensGlassA = makeLensGlass('#0d141f', [120, 320])
   const lensGlassB = makeLensGlass('#140f1c', [200, 420])
@@ -340,11 +411,202 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
     roughness: 0.35,
     envMapIntensity: 1.1,
   })
-  const flashRing = makeMaterial({
-    color: new Color('#2a2f38'),
+  // Smoked, not water-clear: the Clear finish tints the rear panel so the
+  // dressed internals sit in one unifying colour (Prompt C section 3).
+  const smoked = params.transparentBack === true
+  if (smoked) {
+    back.color.set('#121722')
+    back.roughness = 0.06
+    back.clearcoat = 1
+    back.opacity = 0.45
+    back.depthWrite = false
+    back.envMapIntensity = 1.4
+  }
+  const collarText = createCollarTextTexture(OPTICS_PARTNER, COLLAR.outer.rIn, COLLAR.outer.rOut)
+  const collarOuter = makeMaterial({
+    color: new Color(params.frameColor),
     metalness: 1,
-    roughness: 0.3,
-    envMapIntensity: 1,
+    roughness: 0.32,
+    roughnessMap: brush,
+    envMapIntensity: 1.3,
+  })
+  // Etched text scatters: glyphs read rougher than the polished face.
+  const collarTop = makeMaterial({
+    color: new Color(params.frameColor),
+    metalness: 1,
+    roughness: 0.16,
+    roughnessMap: collarText,
+    envMapIntensity: 1.5,
+  })
+  const knurlMaps = createKnurlMaps()
+  knurlMaps.normal.repeat.set(10.5, 1)
+  knurlMaps.rough.repeat.set(10.5, 1)
+  const knurlWall = makeMaterial({
+    color: new Color(params.frameColor),
+    metalness: 1,
+    roughness: 0.5,
+    roughnessMap: knurlMaps.rough,
+    normalMap: knurlMaps.normal,
+    envMapIntensity: 1.1,
+  })
+  const collarStep = makeMaterial({
+    color: new Color(params.frameColor),
+    metalness: 1,
+    roughness: 0.52,
+    roughnessMap: brush,
+    envMapIntensity: 0.9,
+  })
+  const glassSeal = makeMaterial({
+    color: new Color('#0c0e13'),
+    metalness: 0,
+    roughness: 0.7,
+    envMapIntensity: 0.25,
+  })
+  // Per-optic micro-text, etched in the roughness domain. Must match
+  // src/data/product.ts focal specs (Prompt A2 section 9).
+  const microText = createMicroTextTexture(
+    [
+      { text: '23MM 1:1.6', x: 0, y: 0.0162 },
+      { text: '14MM 1:2.2', x: -0.01334, y: -0.0077 },
+      { text: '50MM 1:1.9', x: 0.01334, y: -0.0077 },
+      { text: '135MM 1:3.0', x: 0.0085, y: -0.0146 },
+      { text: 'NVT-2 AF', x: 0.01217, y: 0.00046 },
+    ],
+    COLLAR.glass.r,
+  )
+  // Semi-transparent: hardware reads through dimmed, glass highlight passes
+  // over. Layered correctly it never crossfades with what is underneath.
+  const moduleGlass = makeMaterial({
+    color: new Color('#0a0e14'),
+    metalness: 0,
+    roughness: 0.05,
+    roughnessMap: microText,
+    clearcoat: 1,
+    clearcoatRoughness: 0.04,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+    envMapIntensity: 1.6,
+  })
+  const medallionBrush = createMedallionTexture()
+  const medallion = makeMaterial({
+    color: new Color('#dfe6f0'),
+    metalness: 1,
+    roughness: 0.14,
+    roughnessMap: medallionBrush,
+    anisotropy: 0.6,
+    envMapIntensity: 1.2,
+  })
+  const medallionRing = makeMaterial({
+    color: new Color('#e8eef6'),
+    metalness: 1,
+    roughness: 0.1,
+    envMapIntensity: 1.2,
+  })
+  const periscopeGlass = makeMaterial({
+    color: new Color('#0b0f16'),
+    metalness: 0,
+    roughness: 0.05,
+    clearcoat: 1,
+    clearcoatRoughness: 0.05,
+    transparent: true,
+    opacity: 0.4,
+    depthWrite: false,
+    envMapIntensity: 1.7,
+  })
+  const periscopePrism = makeMaterial({
+    color: new Color('#1a2432'),
+    metalness: 0.9,
+    roughness: 0.12,
+    envMapIntensity: 2.2,
+  })
+  const flashArc = makeMaterial({
+    color: new Color('#fff6e0'),
+    metalness: 0,
+    roughness: 0.4,
+    emissive: new Color('#ffedb8'),
+    emissiveIntensity: 1.6,
+  })
+  const flashDiffuser = makeMaterial({
+    color: new Color('#f2f5fa'),
+    metalness: 0,
+    roughness: 0.62,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false,
+    envMapIntensity: 0.8,
+  })
+  // IR-pass filter: near-black base, polished mirror, deep red-violet
+  // grazing sheen. The reflection is what stops it reading as a hole.
+  const tofWindow = makeMaterial({
+    color: new Color('#04060a'),
+    metalness: 0,
+    roughness: 0.06,
+    clearcoat: 1,
+    clearcoatRoughness: 0.06,
+    sheen: 0.6,
+    sheenColor: new Color('#3a0d1e'),
+    transparent: true,
+    opacity: 0.88,
+    depthWrite: false,
+    envMapIntensity: 2,
+  })
+  const tofEmitter = makeMaterial({
+    color: new Color('#10141c'),
+    metalness: 0.2,
+    roughness: 0.5,
+    emissive: new Color('#40200c'),
+    emissiveIntensity: 0.35,
+    envMapIntensity: 0.4,
+  })
+  const tofReceiver = makeMaterial({
+    color: new Color('#05070b'),
+    metalness: 0.1,
+    roughness: 0.7,
+    envMapIntensity: 0.2,
+  })
+  const tofHousing = makeMaterial({
+    color: new Color('#0c0f15'),
+    metalness: 0.6,
+    roughness: 0.5,
+    envMapIntensity: 0.5,
+  })
+  const moduleMic = makeMaterial({
+    color: new Color('#030405'),
+    metalness: 0,
+    roughness: 0.95,
+    envMapIntensity: 0.1,
+  })
+  // Matte ink under the glass: grain in the green channel doubles as the
+  // feathered alpha edge at the active area (Prompt A2 section 7).
+  // ShapeGeometry UVs are raw meters, so normalize to the glass footprint.
+  const bezelGrain = createBezelGrainTexture(512, 1024, 2, 11, 10)
+  bezelGrain.repeat.set(1 / (DIM.w - BEZEL * 2), 1 / (DIM.h - BEZEL * 2))
+  bezelGrain.offset.set(0.5, 0.5)
+  const bezel = makeMaterial({
+    color: new Color('#07080b'),
+    metalness: 0,
+    roughness: 0.84,
+    roughnessMap: bezelGrain,
+    alphaMap: bezelGrain,
+    transparent: true,
+    envMapIntensity: 0.35,
+  })
+  // Lower panel: textured-family recipe against the smoother upper panel.
+  const panelLower = makeMaterial({
+    color: new Color(params.backColor).multiplyScalar(0.9),
+    metalness: 0.2,
+    roughness: 0.55,
+    roughnessMap: ceramic.data,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.6,
+    envMapIntensity: 0.8,
+  })
+  const panelSeam = makeMaterial({
+    color: new Color('#030405'),
+    metalness: 0,
+    roughness: 0.95,
+    envMapIntensity: 0.1,
   })
   const flashGlass = makeMaterial({
     color: new Color('#eef6ff'),
@@ -355,19 +617,9 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
     transparent: true,
     opacity: 0.9,
   })
-  const rangeGlass = makeMaterial({
-    color: new Color('#2a0a10'),
-    metalness: 0,
-    roughness: 0.12,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    emissive: new Color('#550000'),
-    emissiveIntensity: 0.4,
-    envMapIntensity: 1.2,
-  })
 
   display.emissiveMap = createScreenTexture()
-  display.emissiveIntensity = 1.15
+  display.emissiveIntensity = 0.9
 
   return {
     framePX,
@@ -397,9 +649,27 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
     speaker,
     antenna,
     simTray,
-    flashRing,
+    collarOuter,
+    collarTop,
+    knurlWall,
+    collarStep,
+    glassSeal,
+    moduleGlass,
+    medallion,
+    medallionRing,
+    periscopeGlass,
+    periscopePrism,
+    flashArc,
+    flashDiffuser,
+    tofWindow,
+    tofEmitter,
+    tofReceiver,
+    tofHousing,
+    moduleMic,
+    bezel,
+    panelLower,
+    panelSeam,
     flashGlass,
-    rangeGlass,
   }
 }
 
@@ -408,7 +678,7 @@ export function createDefaultMaterials(): PhoneMaterialSet {
   const set = createPhoneMaterials(FINISH_PARAMS.obsidian)
   const previous = set.display.emissiveMap
   set.display.emissiveMap = createScreenTexture()
-  set.display.emissiveIntensity = 1.15
+  set.display.emissiveIntensity = 0.9
   if (previous !== null) previous.dispose()
   return set
 }

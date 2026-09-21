@@ -32,8 +32,26 @@ const SHELL_MATS = [
   'lensBarrel',
   'lensCavity',
   'sensorGlint',
-  'flashRing',
-  'flashGlass',
+  'collarOuter',
+  'collarTop',
+  'knurlWall',
+  'collarStep',
+  'glassSeal',
+  'moduleGlass',
+  'medallion',
+  'medallionRing',
+  'periscopeGlass',
+  'periscopePrism',
+  'flashArc',
+  'flashDiffuser',
+  'tofWindow',
+  'tofEmitter',
+  'tofReceiver',
+  'tofHousing',
+  'moduleMic',
+  'bezel',
+  'panelLower',
+  'panelSeam',
   'antenna',
   'simTray',
   'port',
@@ -44,7 +62,7 @@ const SHELL_MATS = [
   'logo',
   'regulatory',
   'focusRing',
-  'rangeGlass',
+  'flashGlass',
 ] as const satisfies ReadonlyArray<keyof PhoneMaterialSet>
 
 /** Bezel and edge hardware dials out harder so it never paints over internals. */
@@ -64,6 +82,18 @@ const FRAME_MATS = [
 ] as const
 
 const XRAY_ACTS = new Set(['xray', 'rebuild'])
+
+/** Rest opacity for translucent optics. Everything else rests at 1. */
+const BASE_OPACITY: Partial<Record<keyof PhoneMaterialSet, number>> = {
+  lensGlassA: 0.55,
+  lensGlassB: 0.55,
+  lensGlassC: 0.55,
+  moduleGlass: 0.5,
+  periscopeGlass: 0.4,
+  flashDiffuser: 0.75,
+  tofWindow: 0.88,
+  focusRing: 0,
+}
 
 export interface FilmRefs {
   hero: MutableRefObject<THREE.Group | null>
@@ -226,11 +256,15 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     }
 
     // X-ray dissolve: shell fades together, front glass merely dims.
+    // Translucent optics keep their base opacity (they are glass, not
+    // shutters): stomping them to 1 would brick over the barrels, the
+    // medallion, and the ToF internals behind them.
     const ghost = st.shellGhost > 0.01
     for (const name of SHELL_MATS) {
       const mat = materials[name]
       mat.depthWrite = !ghost
-      mat.opacity = ghost ? Math.max(0.02, 1 - st.shellGhost * 0.9) : 1
+      const base = BASE_OPACITY[name] ?? 1
+      mat.opacity = ghost ? Math.max(0.02, base - st.shellGhost * 0.9) : base
     }
     if (ghost) {
       const frameAlpha = Math.max(
@@ -299,7 +333,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
       'frameChamfer',
       'back',
       'island',
-      'flashRing',
+      'collarOuter',
     ] as const) {
       materials[name].envMapIntensity = s.env
     }
@@ -317,7 +351,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
       ['sensor', 0.6, 0.0003],
     ] as const
     const sep = st.explodeOptics
-    for (const lens of ['main', 'ultra', 'tele'] as const) {
+    for (const lens of ['main', 'ultra', 'mid', 'periscope'] as const) {
       for (const [layer, delay, distance] of layers) {
         const g = refs.opticsSeparation.current[`${lens}:${layer}`]
         if (g === null || g === undefined) continue
@@ -337,6 +371,8 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     c.battLift = st.battLift
     c.subjectDim = st.subjectDim
     c.energy = st.energy
+    c.shieldLift = st.shieldLift
+    c.coilRing = st.coilRing
 
     // Hover inspection during the x-ray pass only.
     if (XRAY_ACTS.has(act) && !reduced && refs.internals.current !== null) {

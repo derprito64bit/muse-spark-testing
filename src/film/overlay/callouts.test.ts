@@ -4,7 +4,7 @@ import { layoutCallouts, type CalloutDef } from './callouts.ts'
 
 const DEFS: CalloutDef[] = [
   { partId: 'die', title: 'Die', body: '3 nm', priority: 1 },
-  { partId: 'cell', title: 'Cell', body: '5200 mAh', priority: 2 },
+  { partId: 'cell', title: 'Cell', body: '4000 mAh', priority: 2 },
 ]
 
 function camera(): THREE.PerspectiveCamera {

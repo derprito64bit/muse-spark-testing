@@ -78,4 +78,16 @@ describe('film states', () => {
     expect(computeFilmStates(0.2).calloutOpacity).toBe(0)
     expect(computeFilmStates(0.6).calloutOpacity).toBe(0)
   })
+
+  it('lifts the shield lids inside the main explode window', () => {
+    expect(computeFilmStates(0.4).shieldLift).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.3).shieldLift).toBe(0)
+    expect(computeFilmStates(0.52).shieldLift).toBe(0)
+  })
+
+  it('lights the coil ring with the energy beat', () => {
+    expect(computeFilmStates(0.905).coilRing).toBeGreaterThan(0.5)
+    expect(computeFilmStates(0.8).coilRing).toBe(0)
+    expect(computeFilmStates(0.95).coilRing).toBe(0)
+  })
 })

@@ -4,9 +4,9 @@ import { usePhoneConfig, type FocusLensId } from '../PhoneViewer/PhoneConfig.tsx
 const FOCAL_TO_LENS: Record<string, FocusLensId> = {
   '0.5x': 'ultra',
   '1x': 'main',
-  '2x': 'main',
-  '5x': 'tele',
-  '10x': 'tele',
+  '2x': 'mid',
+  '5x': 'periscope',
+  '10x': 'periscope',
 }
 
 /**
@@ -40,8 +40,7 @@ export function FocalStrip({ onZoom }: { onZoom?: (zoom: string) => void }) {
         })}
       </div>
       <p className="spec-tech mt-4" data-testid="focal-detail">
-        Focused lens: {focusLens}. 2x is a sensor crop of the main; 10x is a hybrid of the
-        telephoto.
+        Focused lens: {focusLens}. 2x is the 50mm mid lens; 10x is a hybrid of the 135mm periscope.
       </p>
     </section>
   )

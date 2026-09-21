@@ -11,10 +11,12 @@ import {
   DISPLAY_INSET,
   DISPLAY_PANEL,
   FRONT_GLASS,
+  PANEL_SPLIT,
   SY,
 } from './phoneDimensions.ts'
 import {
   assignRailGroups,
+  createBezelGeometry,
   createFrameBodyGeometry,
   createFrameRingGeometry,
   createSlabGeometry,
@@ -36,7 +38,7 @@ interface PhoneModelProps {
   /** Animated focus ring on the active lens. The film disables this. */
   animateFocusRing?: boolean
   /**
-   * Low drops knurling, thread ring, the second baffle, the port tongue
+   * Low drops knurling, the second baffle, ToF internals, the port tongue
    * contacts, and the regulatory text, and halves outline sampling.
    */
   detail?: 'high' | 'low'
@@ -48,7 +50,12 @@ interface PhoneModelProps {
   opticsSeparation?: MutableRefObject<Record<string, THREE.Group | null>>
 }
 
-const LENSES: Array<{ key: FocusLensId }> = [{ key: 'main' }, { key: 'ultra' }, { key: 'tele' }]
+const LENSES: Array<{ key: FocusLensId }> = [
+  { key: 'main' },
+  { key: 'ultra' },
+  { key: 'mid' },
+  { key: 'periscope' },
+]
 
 /** Procedurally built, finish-reactive phone model. Pure geometry and materials. */
 export function PhoneModel({
@@ -129,6 +136,20 @@ function PhoneModelInner({
         DISPLAY_PANEL.depth,
         0.0006,
         0.0001,
+      ),
+    [],
+  )
+  // Bezel ink ring: glass footprint outside, active area inside, feathered
+  // edge. Renders under the glass slab so the specular passes over unbroken.
+  const bezelGeometry = useMemo(
+    () =>
+      createBezelGeometry(
+        DIM.w - BEZEL * 2,
+        DIM.h - BEZEL * 2,
+        0.0011,
+        DIM.w - BEZEL * 2 - DISPLAY_INSET * 2,
+        DIM.h - BEZEL * 2 - DISPLAY_INSET * 2,
+        0.001,
       ),
     [],
   )
@@ -226,7 +247,28 @@ function PhoneModelInner({
           detail={detail}
           separation={opticsSeparation}
         />
-        <mesh position={[0, -0.065, BACK_FACE - 0.00006]} rotation={[0, Math.PI, 0]}>
+        {/* Two-material rear panel (Prompt A2 section 8): recessed groove
+            plus a proud textured lower panel. Per finish, not global. */}
+        {FINISH_PARAMS[finish].panelSplit === true ? (
+          <group>
+            <mesh position={[0, PANEL_SPLIT.seamY, BACK_FACE + 0.00005]}>
+              <boxGeometry args={[DIM.w - 0.004, PANEL_SPLIT.seamWidth, 0.0003]} />
+              <primitive object={set.panelSeam} attach="material" />
+            </mesh>
+            <mesh position={[0, (PANEL_SPLIT.seamY - SY + 0.002) / 2 - 0.0001, BACK_FACE]}>
+              <boxGeometry args={[DIM.w - 0.004, -SY + 0.002 - PANEL_SPLIT.seamY, 0.00024]} />
+              <primitive object={set.panelLower} attach="material" />
+            </mesh>
+          </group>
+        ) : null}
+        <mesh
+          position={[
+            0,
+            -0.065,
+            BACK_FACE - (FINISH_PARAMS[finish].panelSplit === true ? 0.00018 : 0.00006),
+          ]}
+          rotation={[0, Math.PI, 0]}
+        >
           <planeGeometry args={[0.016, 0.004]} />
           <primitive object={set.logo} attach="material" />
         </mesh>
@@ -249,6 +291,9 @@ function PhoneModelInner({
       <group ref={groups?.glass}>
         <mesh geometry={glassSlabGeometry} position={[0, 0, FRONT_GLASS.z]}>
           <primitive object={set.screen} attach="material" />
+        </mesh>
+        <mesh geometry={bezelGeometry}>
+          <primitive object={set.bezel} attach="material" />
         </mesh>
         <mesh geometry={displaySlabGeometry} position={[0, 0, DISPLAY_PANEL.z]}>
           <primitive object={set.display} attach="material" />

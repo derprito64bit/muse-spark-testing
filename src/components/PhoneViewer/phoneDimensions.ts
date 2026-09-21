@@ -19,40 +19,108 @@ export const DISPLAY_PANEL = { depth: 0.0011, z: 0.00215 } as const
 
 /** Front frame split: solid rear body plus a perimeter bezel ring. */
 export const FRAME_BODY_DEPTH = 0.0042
-export const RING_BASE_Z = 0.0004
-export const RING_DEPTH = 0.0035
+// The ring tiles against the body with no gap: body top sits at -0.0001
+// (back face + depth - bevels), so the ring base starts exactly there. The
+// old 0.0004 base left a 0.5mm perimeter groove that read edge-on as the
+// device split in two phones.
+export const RING_BASE_Z = -0.0001
+export const RING_DEPTH = 0.004
 
 /** Rear ceramic outboard face: the reference plane every rear feature seats against. */
 export const CERAMIC_FACE_Z = -0.00391
 
 /**
- * Camera pad (Prompt A section 5.2, newest design authority). Offset
- * rounded-square two-tier plateau, upper-left: lower shelf carries flash
- * and rangefinder, upper shelf carries the L-arranged optics.
+ * Circular camera module (Prompt A2, newest design authority). Centered on
+ * the body axis in the upper third: two machined collar steps, domed cover
+ * glass, three round lenses on a triangle plus a folded periscope, arc
+ * flash, ToF pair, and a module mic. Replaces the Prompt-A square plateau.
  */
-export const ISLAND = { x: -0.0192, y: 0.052 } as const
-/** Camera pad, two tiers. Lower carries flash and rangefinder, upper carries optics. */
-export const ISLAND_LOWER = { size: 0.0342, depth: 0.0011 } as const
-export const ISLAND_UPPER = { size: 0.0262, depth: 0.0019, dx: -0.0032, dy: 0.0028 } as const
-/** Machined accessory thread ring around the pad perimeter. */
-export const THREAD_RING = { inner: 0.0163, outer: 0.0171, depth: 0.0004, teeth: 96 } as const
+export const MODULE = {
+  cx: 0, // centered horizontally, not offset
+  cy: 0.0458, // 45.8mm up from body center
+  outerR: 0.0212, // 42.4mm diameter, 55% of body width
+  proud: 0.0019, // 1.9mm total rise off the rear panel
+  baseFillet: 0.0007, // 0.7mm blend into the rear panel, a fillet not a chamfer
+} as const
+/** Concentric collar rings. Two machined steps, not one band. */
+export const COLLAR = {
+  outer: { rOut: 0.0212, rIn: 0.0186, rise: 0.0019, knurlTeeth: 168, knurlDepth: 0.00018 },
+  step: { rOut: 0.0186, rIn: 0.0172, rise: 0.0012 },
+  glass: { r: 0.0172, rise: 0.0008, dome: 0.00006 },
+} as const
+/** Dark seal ring where the cover glass meets the step. */
+export const GLASS_SEAL = { rOut: 0.01725, rIn: 0.0169, depth: 0.00006 } as const
+/** Three round assemblies on a triangle, apex up. Radius from module center. */
+export const LENS_RING_R = 0.0092
 /**
- * Lens seats, shelf-local meters. L arrangement: two stacked on the left
- * edge, one offset lower-right. Diameters 11.4, 11.4, 9.2mm with per-lens
- * AR coating hue in radians. Collar clearance against the upper shelf is
- * asserted in CameraAssembly.test.tsx.
+ * Round lens specs, polar placement. Per-lens barrel depths are physical:
+ * ultra shallow (1.0mm), main (1.6mm), mid-tele deepest (2.1mm).
+ * coatHue drives per-lens AR coating tint in radians.
  */
-export const LENS_LAYOUT = [
-  { key: 'main', dx: -0.005, dy: 0.0035, r: 0.0057, coatHue: 2.4, barrelDepth: 0.0014 },
-  { key: 'ultra', dx: -0.0045, dy: -0.0038, r: 0.0057, coatHue: 5.1, barrelDepth: 0.0011 },
-  { key: 'tele', dx: 0.0045, dy: -0.0035, r: 0.0046, coatHue: 0.2, barrelDepth: 0.0016 },
+export const LENSES = [
+  { key: 'main', angleDeg: 90, r: 0.0054, barrelDepth: 0.0016, elementZ: -0.0009, coatHue: 2.1 },
+  { key: 'ultra', angleDeg: 210, r: 0.0044, barrelDepth: 0.001, elementZ: -0.0005, coatHue: 4.6 },
+  { key: 'mid', angleDeg: 330, r: 0.0044, barrelDepth: 0.0021, elementZ: -0.0013, coatHue: 0.3 },
 ] as const
-/** Elongated dual-LED flash on the lower shelf, clear of the upper disc. */
-export const ISLAND_FLASH = { angle: 0, ring: 0.0145, w: 0.007, h: 0.003 } as const
-/** Laser rangefinder window on the lower shelf, clear of the upper disc. */
-export const ISLAND_RANGE = { angle: -1.2, ring: 0.0142, r: 0.002 } as const
-/** Upper shelf top plane: every lens builds outward from here. */
-export const ISLAND_FACE_Z = -0.00691
+/** Periscope window: a rounded rectangle, folded optic below the triangle. */
+export const PERISCOPE = {
+  x: 0,
+  // Deviation from the first draft (y -0.0118, w 0.0128, h 0.0062): those
+  // numbers collide with the ultra/mid collars (bottom edge at -0.0102) and
+  // the bottom corners escape the cover glass (0.0189 > 0.0172). Parked and
+  // sized to clear every collar and land inside the glass.
+  y: -0.0136,
+  w: 0.011,
+  h: 0.005,
+  r: 0.0021,
+  recess: 0.0004,
+  prismAngleDeg: 40, // interior face angle, so you cannot see straight down
+  cavityDepth: 0.0026,
+} as const
+/** Flash as an arc segment cut into the step ring, not a satellite circle. */
+export const FLASH_ARC = {
+  startDeg: 24,
+  sweepDeg: 34,
+  rIn: 0.0176,
+  rOut: 0.0184,
+  dies: 2,
+  diffuserRough: 0.62,
+} as const
+/** Module microphone, 0.7mm. Present because real modules have one. */
+export const MODULE_MIC = { angleDeg: 152, ringR: 0.0152, d: 0.0007, depth: 0.0011 } as const
+/** Time-of-flight scanner: separate emitter and receiver under one window. */
+export const TOF = {
+  ringR: 0.0128,
+  angleDeg: 18,
+  emitter: { d: 0.0021, offsetDeg: -4.2, depth: 0.0008 },
+  receiver: { d: 0.0026, offsetDeg: 4.2, depth: 0.0011 },
+  window: { w: 0.0082, h: 0.0034, r: 0.0017, recess: 0.00018 },
+} as const
+/** Medallion: polished metal inlay bonded under the cover glass. */
+export const MEDALLION = {
+  r: 0.0031,
+  z: -0.00012, // 0.12mm below the glass outer face
+  thickness: 0.00008,
+  ringWidth: 0.00008,
+} as const
+/** Display bezel: fine matte ink layer printed on the glass underside. */
+export const BEZEL_SURFACE = {
+  color: '#07080b',
+  roughness: 0.84,
+  z: 0.0026,
+  feather: 0.00012,
+} as const
+/** Optional two-material rear panel. Only some finishes get it. */
+export const PANEL_SPLIT = {
+  seamY: -0.0126, // 12.6mm below body center, lower third
+  seamWidth: 0.00035,
+  step: 0.00012, // lower panel sits 0.12mm proud of the upper
+  seamChamfer: 0.00008,
+} as const
+/** Fictional optics partner for the medallion and collar text. */
+export const OPTICS_PARTNER = 'NOVEK' as const
+/** Module top plane: every lens builds outward from here. */
+export const MODULE_FACE_Z = CERAMIC_FACE_Z - MODULE.proud
 
 /** Bottom-edge hardware. */
 export const GRILLE_SLOT = { w: 0.00055, h: 0.0003, depth: 0.0012 } as const
@@ -89,10 +157,9 @@ export const EARPIECE = { w: 0.012, h: 0.0006, y: 0.0772 } as const
 /**
  * Superellipse exponents. The exponent controls corner fullness: 2 is an
  * ellipse, 4 reads as a phone, 5.5 as a brick. Body 5.0 for tight premium
- * corners, island 4.2 slightly squarer.
+ * corners. The camera module is circular (Prompt A2), not a squircle.
  */
 export const BODY_N = 5.0
-export const ISLAND_N = 4.2
 
 /**
  * Chamfer sizes in meters. Every visible edge gets one or it renders as a
@@ -100,8 +167,8 @@ export const ISLAND_N = 4.2
  */
 export const CHAMFER = {
   glassMeet: 0.00025,
-  plateauStep: 0.0003,
-  plateauBase: 0.0005,
+  moduleBase: 0.0005, // 0.50mm, module into the rear panel, a fillet not a flat
+  collarStep: 0.0003, // 0.30mm, between collar tiers
   collar: 0.00015,
   button: 0.0001,
   portMouth: 0.0002,

@@ -35,7 +35,7 @@ test('SoC panel switches tabs', async ({ page }) => {
 test('focal strip re-focuses the lens readout', async ({ page }) => {
   await page.goto('/cameras')
   await page.getByTestId('focal-5x').click()
-  await expect(page.getByTestId('focal-detail')).toContainText('tele')
+  await expect(page.getByTestId('focal-detail')).toContainText('periscope')
 })
 
 test('configurator changes finish and price', async ({ page }) => {

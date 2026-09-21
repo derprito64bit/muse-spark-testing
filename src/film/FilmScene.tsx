@@ -68,6 +68,8 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
     battLift: 0,
     subjectDim: 0,
     energy: 0,
+    shieldLift: 0,
+    coilRing: 0,
   })
   const opticsSeparation = useRef<Record<string, THREE.Group | null>>({})
   // TEMP-DEBUG diagnosis hook. Removed before merge.

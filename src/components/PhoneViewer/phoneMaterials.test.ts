@@ -76,6 +76,21 @@ describe('phone material sets', () => {
     for (const value of Object.values(CHAMFER)) {
       expect(value).toBeGreaterThanOrEqual(0.0001)
     }
-    expect(CHAMFER.plateauBase).toBeGreaterThan(CHAMFER.plateauStep)
+    expect(CHAMFER.moduleBase).toBeGreaterThan(CHAMFER.collarStep)
+  })
+
+  it('keeps the etched collar text in the roughness domain, not albedo', () => {
+    const set = createPhoneMaterials(FINISH_PARAMS.obsidian)
+    expect(set.collarTop.roughnessMap).not.toBeNull()
+    expect(set.collarTop.map).toBeNull()
+    expect(set.moduleGlass.roughnessMap).not.toBeNull()
+    disposePhoneMaterials(set)
+  })
+
+  it('smokes the rear panel for the Clear finish', () => {
+    const set = createPhoneMaterials(FINISH_PARAMS.clear)
+    expect(set.back.opacity).toBeLessThan(1)
+    expect(set.back.clearcoat).toBe(1)
+    disposePhoneMaterials(set)
   })
 })
