@@ -155,10 +155,11 @@ export const EARPIECE = { w: 0.012, h: 0.0006, y: 0.0772 } as const
 
 /**
  * Superellipse exponents. The exponent controls corner fullness: 2 is an
- * ellipse, 4 reads as a phone, 5.5 as a brick. Body 5.0 for tight premium
- * corners. The camera module is circular (Prompt A2), not a squircle.
+ * ellipse, 4 reads as a phone, 5.5 as a brick. Body 5.5 for tight
+ * rectangular corners that carry the glass out to the rails. The camera
+ * module is circular (Prompt A2), not a squircle.
  */
-export const BODY_N = 5.0
+export const BODY_N = 5.5
 
 /**
  * Chamfer sizes in meters. Every visible edge gets one or it renders as a

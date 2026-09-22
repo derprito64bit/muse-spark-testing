@@ -92,13 +92,16 @@ export function createFrameRingGeometry(coarse = false): THREE.BufferGeometry {
   const perQuadrant = coarse ? 32 : 64
   const total = perQuadrant * 4
   const outer = superellipsePoints(DIM.w / 2, DIM.h / 2, bodyExponent(), perQuadrant)
-  const inner = roundedRectLoop(
-    -DIM.w / 2 + BEZEL * 0.95,
-    -DIM.h / 2 + BEZEL * 0.95,
-    DIM.w - BEZEL * 1.9,
-    DIM.h - BEZEL * 1.9,
-    0.0012,
-    total,
+  // Display opening as a superellipse, not a rounded rect: a rounded-rect
+  // hole cuts deep at the corners while the n=5 body stays full, leaving a
+  // wide uneven ledge. Same exponent family as the body keeps the lid strip
+  // a uniform width all the way around. Phase-compatible by construction
+  // (+X start, monotone CCW), so the annulus never pinwheels.
+  const inner = superellipsePoints(
+    DIM.w / 2 - BEZEL * 0.95,
+    DIM.h / 2 - BEZEL * 0.95,
+    bodyExponent(),
+    perQuadrant,
   )
   const zBack = RING_BASE_Z
   const zFront = RING_BASE_Z + RING_DEPTH
@@ -208,62 +211,6 @@ function normalize3(x: number, y: number, z: number): [number, number, number] {
 }
 
 /**
- * Rounded-rectangle loop resampled to exactly count points by arclength,
- * starting at the +X axis (right-edge midpoint) to phase-match the
- * superellipse outer. Phase alignment is load-bearing: the annulus strip
- * joins outer[i] to inner[i], so a rotated start twists the lid into a
- * pinwheel that covers the opening and z-fights with itself.
- */
-export function roundedRectLoop(
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-  count: number,
-): Array<[number, number]> {
-  const c = Math.min(r, w / 2, h / 2)
-  // Walk CCW from the right-edge midpoint: up the right edge, around
-  // TR, TL, BL, BR corners, back along the bottom edge.
-  const dense: Array<[number, number]> = [[x + w, y + h / 2]]
-  const perCorner = 24
-  const corners: Array<[number, number, number, number]> = [
-    // [centerX, centerY, startAngle, endAngle]
-    [x + w - c, y + h - c, 0, Math.PI / 2],
-    [x + c, y + h - c, Math.PI / 2, Math.PI],
-    [x + c, y + c, Math.PI, Math.PI * 1.5],
-    [x + w - c, y + c, Math.PI * 1.5, Math.PI * 2],
-  ]
-  for (const [cx, cy, start, end] of corners) {
-    for (let i = 1; i <= perCorner; i++) {
-      const a = (start ?? 0) + (i / perCorner) * ((end ?? 0) - (start ?? 0))
-      dense.push([(cx ?? 0) + Math.cos(a) * c, (cy ?? 0) + Math.sin(a) * c])
-    }
-  }
-  // Resample uniformly by arclength, starting at the first point (+X axis).
-  const lengths: number[] = [0]
-  for (let i = 1; i <= dense.length; i++) {
-    const a = dense[i - 1] as [number, number]
-    const b = dense[i % dense.length] as [number, number]
-    lengths.push((lengths[i - 1] ?? 0) + Math.hypot(b[0] - a[0], b[1] - a[1]))
-  }
-  const total = lengths[dense.length] ?? 1
-  const out: Array<[number, number]> = []
-  let seg = 0
-  for (let k = 0; k < count; k++) {
-    const target = (k / count) * total
-    while (seg < dense.length - 1 && (lengths[seg + 1] ?? 0) < target) seg += 1
-    const a = dense[seg % dense.length] as [number, number]
-    const b = dense[(seg + 1) % dense.length] as [number, number]
-    const segStart = lengths[seg] ?? 0
-    const segEnd = lengths[seg + 1] ?? segStart + 1
-    const t = segEnd > segStart ? (target - segStart) / (segEnd - segStart) : 0
-    out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t])
-  }
-  return out
-}
-
-/**
  * Circular module base (Prompt A2). Lathe profile with a smooth G1 base
  * fillet into the rear panel: the pad-to-panel transition is one machined
  * surface, not a flat chamfer. Bottom left open (seated inside the body).
@@ -287,26 +234,62 @@ export function createModuleBaseGeometry(
 }
 
 /**
- * Display bezel ink ring: rounded-rect outline with a rounded-rect opening
+ * Display bezel ink ring: superellipse outline with a superellipse opening
  * for the active area, feathered by the grain map's alpha falloff. Sits
- * under the front glass (BEZEL_SURFACE.z) so the glass specular passes over
- * it unbroken.
+ * under the front glass (BEZEL_SURFACE.z) so the glass reflection passes
+ * over it unbroken. Both loops share the body exponent family so the ink
+ * band is a uniform width, corners included.
  */
 export function createBezelGeometry(
-  outerW: number,
-  outerH: number,
-  outerR: number,
-  innerW: number,
-  innerH: number,
-  innerR: number,
+  outerHW: number,
+  outerHH: number,
+  innerHW: number,
+  innerHH: number,
+  n = 5,
 ): THREE.BufferGeometry {
-  const shape = new THREE.Shape()
-  roundedRectPath(shape, -outerW / 2, -outerH / 2, outerW, outerH, outerR)
+  const shape = superellipseShape(outerHW, outerHH, n, 64)
+  const holePts = superellipsePoints(innerHW, innerHH, n, 64)
   const hole = new THREE.Path()
-  roundedRectPath(hole, -innerW / 2, -innerH / 2, innerW, innerH, innerR)
+  const first = holePts[0]
+  if (first !== undefined) {
+    hole.moveTo(first[0], first[1])
+    for (let i = 1; i < holePts.length; i++) {
+      const p = holePts[i]
+      if (p !== undefined) hole.lineTo(p[0], p[1])
+    }
+    hole.closePath()
+  }
   shape.holes.push(hole)
   const geometry = new THREE.ShapeGeometry(shape, 16)
   geometry.translate(0, 0, BEZEL_SURFACE.z)
+  return geometry
+}
+
+/**
+ * Centered superellipse slab with soft bevels. Front glass, display, and
+ * back panel share the body exponent family: the glass extends out to meet
+ * the rail overhang with a slight uniform gap instead of cutting deep at
+ * the corners like a rounded rect would.
+ */
+export function superellipseSlabGeometry(
+  halfW: number,
+  halfH: number,
+  n: number,
+  depth: number,
+  bevel: number,
+): THREE.BufferGeometry {
+  const shape = superellipseShape(halfW, halfH, n, 64)
+  const body = Math.max(0.0001, depth - bevel * 2)
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: body,
+    bevelEnabled: true,
+    bevelSize: bevel,
+    bevelThickness: bevel,
+    bevelSegments: 3,
+    curveSegments: 12,
+    steps: 1,
+  })
+  geometry.translate(0, 0, -(body / 2 + bevel))
   return geometry
 }
 

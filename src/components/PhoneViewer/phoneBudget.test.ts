@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import {
   BEZEL,
+  BODY_N,
   CHAMFER,
   COLLAR,
   DIM,
@@ -31,6 +32,7 @@ import {
   createModuleBaseGeometry,
   createRoundedRectGeometry,
   createSlabGeometry,
+  superellipseSlabGeometry,
 } from './phoneGeometry.ts'
 
 /**
@@ -90,19 +92,14 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   add('frameRing', tris(createFrameRingGeometry(coarse)))
   const panelW = DIM.w - BEZEL * 2
   const panelH = DIM.h - BEZEL * 2
-  add('backSlab', tris(createSlabGeometry(panelW, panelH, BACK_PANEL.depth, 0.0013)))
-  add('glassSlab', tris(createSlabGeometry(panelW, panelH, FRONT_GLASS.depth, 0.0012)))
+  add(
+    'backSlab',
+    tris(superellipseSlabGeometry(0.03695, 0.07835, BODY_N, BACK_PANEL.depth, 0.0013)),
+  )
+  add('glassSlab', tris(superellipseSlabGeometry(0.0376, 0.079, BODY_N, FRONT_GLASS.depth, 0.0012)))
   add(
     'displaySlab',
-    tris(
-      createSlabGeometry(
-        panelW - DISPLAY_INSET * 2,
-        panelH - DISPLAY_INSET * 2,
-        DISPLAY_PANEL.depth,
-        0.001,
-        0.0001,
-      ),
-    ),
+    tris(superellipseSlabGeometry(0.036, 0.0774, BODY_N, DISPLAY_PANEL.depth, 0.0001)),
   )
   add('logo', tris(new THREE.PlaneGeometry(0.016, 0.004)))
   if (detail === 'high') {
@@ -198,19 +195,7 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   add('cameraModule', module)
 
   // Bezel ink ring under the front glass.
-  add(
-    'bezel',
-    tris(
-      createBezelGeometry(
-        panelW,
-        panelH,
-        0.0011,
-        panelW - DISPLAY_INSET * 2,
-        panelH - DISPLAY_INSET * 2,
-        0.001,
-      ),
-    ),
-  )
+  add('bezel', tris(createBezelGeometry(0.0376, 0.079, 0.036, 0.0774, 5)))
 
   // Panel split, worst case (Slate/Ember): seam groove plus proud lower panel.
   add(

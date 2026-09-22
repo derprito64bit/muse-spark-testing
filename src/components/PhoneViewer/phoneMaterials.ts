@@ -1,6 +1,6 @@
 import { Color, MeshPhysicalMaterial, type MeshPhysicalMaterialParameters } from 'three'
 import { FINISH_PARAMS, type FinishParams } from './phoneFinishes.ts'
-import { BEZEL, COLLAR, DIM, OPTICS_PARTNER } from './phoneDimensions.ts'
+import { COLLAR, OPTICS_PARTNER } from './phoneDimensions.ts'
 import {
   createBarrelGradientMap,
   createBezelGrainTexture,
@@ -579,9 +579,10 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
   })
   // Matte ink under the glass: grain in the green channel doubles as the
   // feathered alpha edge at the active area (Prompt A2 section 7).
-  // ShapeGeometry UVs are raw meters, so normalize to the glass footprint.
+  // ShapeGeometry UVs are raw meters, so normalize to the glass footprint
+  // (superellipse half extents 0.0376 by 0.079).
   const bezelGrain = createBezelGrainTexture(512, 1024, 2, 11, 10)
-  bezelGrain.repeat.set(1 / (DIM.w - BEZEL * 2), 1 / (DIM.h - BEZEL * 2))
+  bezelGrain.repeat.set(1 / 0.0752, 1 / 0.158)
   bezelGrain.offset.set(0.5, 0.5)
   const bezel = makeMaterial({
     color: new Color('#07080b'),

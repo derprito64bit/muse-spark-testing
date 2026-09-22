@@ -7,6 +7,7 @@ import {
   BACK_FACE,
   BACK_PANEL,
   BEZEL,
+  CHAMFER,
   DIM,
   DISPLAY_INSET,
   DISPLAY_PANEL,
@@ -16,10 +17,11 @@ import {
 } from './phoneDimensions.ts'
 import {
   assignRailGroups,
+  bodyExponent,
   createBezelGeometry,
   createFrameBodyGeometry,
   createFrameRingGeometry,
-  createSlabGeometry,
+  superellipseSlabGeometry,
 } from './phoneGeometry.ts'
 import {
   FINISH_COLORS,
@@ -121,39 +123,25 @@ function PhoneModelInner({
     return geometry
   }, [detail])
   const backSlabGeometry = useMemo(
-    () => createSlabGeometry(DIM.w - BEZEL * 2, DIM.h - BEZEL * 2, BACK_PANEL.depth, 0.0013),
+    () => superellipseSlabGeometry(0.03695, 0.07835, bodyExponent(), BACK_PANEL.depth, 0.0013),
     [],
   )
   const glassSlabGeometry = useMemo(
     // Corner radius matches the frame-ring opening (0.0012): matched
     // corners, no slivers or overlaps at the glass meet.
-    () => createSlabGeometry(DIM.w - BEZEL * 2, DIM.h - BEZEL * 2, FRONT_GLASS.depth, 0.0012),
+    () =>
+      superellipseSlabGeometry(0.0376, 0.079, bodyExponent(), FRONT_GLASS.depth, CHAMFER.glassMeet),
     [],
   )
   const displaySlabGeometry = useMemo(
-    () =>
-      createSlabGeometry(
-        DIM.w - BEZEL * 2 - DISPLAY_INSET * 2,
-        DIM.h - BEZEL * 2 - DISPLAY_INSET * 2,
-        DISPLAY_PANEL.depth,
-        0.001,
-        0.0001,
-      ),
+    () => superellipseSlabGeometry(0.036, 0.0774, bodyExponent(), DISPLAY_PANEL.depth, 0.0001),
     [],
   )
   // Bezel ink ring: glass footprint outside, active area inside, feathered
-  // edge. Corner radii match the glass (0.0012) and the display (0.001).
+  // edge. Corner loops share the body exponent so the ink band is uniform.
   // Renders under the glass slab so the specular passes over unbroken.
   const bezelGeometry = useMemo(
-    () =>
-      createBezelGeometry(
-        DIM.w - BEZEL * 2,
-        DIM.h - BEZEL * 2,
-        0.0012,
-        DIM.w - BEZEL * 2 - DISPLAY_INSET * 2,
-        DIM.h - BEZEL * 2 - DISPLAY_INSET * 2,
-        0.001,
-      ),
+    () => createBezelGeometry(0.0376, 0.079, 0.036, 0.0774, bodyExponent()),
     [],
   )
   const lensRefs = useRef<Partial<Record<FocusLensId, THREE.Group>>>({})
