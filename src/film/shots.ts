@@ -46,27 +46,11 @@ export const SHOTS: Record<ActId, ShotProfile> = {
     maxFovVelocity: 10,
     settle: 0.2,
   },
-  xray: {
+  teardown: {
     kind: 'reveal',
     dampPerSecond: 5,
     targetDampPerSecond: 4,
     maxAngularVelocity: 1,
-    maxFovVelocity: 8,
-    settle: 0.2,
-  },
-  chip: {
-    kind: 'macro',
-    dampPerSecond: 3.5,
-    targetDampPerSecond: 3,
-    maxAngularVelocity: 0.5,
-    maxFovVelocity: 4,
-    settle: 0.25,
-  },
-  rebuild: {
-    kind: 'reveal',
-    dampPerSecond: 6,
-    targetDampPerSecond: 4.5,
-    maxAngularVelocity: 1.2,
     maxFovVelocity: 8,
     settle: 0.2,
   },

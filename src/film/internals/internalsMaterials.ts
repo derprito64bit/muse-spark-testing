@@ -13,6 +13,8 @@ export interface InternalsMaterialSet {
   housing: MeshStandardMaterial
   coil: MeshStandardMaterial
   dark: MeshStandardMaterial
+  /** Vapour chamber: stamped copper, distinct from the coil. */
+  vapor: MeshStandardMaterial
   /** Coil status ring: charging indicator for the Clear finish. */
   coilRing: MeshStandardMaterial
   /** Laser marking decal, low contrast. */
@@ -33,6 +35,7 @@ export const INTERNALS_KEYS = [
   'housing',
   'coil',
   'dark',
+  'vapor',
   'coilRing',
   'dieMark',
   'dieFloor',
@@ -126,6 +129,14 @@ export function createInternalsMaterials(dressed = false): InternalsMaterialSet 
     metalness: 0,
     ...transparent,
   })
+  const vapor = new MeshStandardMaterial({
+    color: new Color('#a86a32'),
+    roughness: 0.38,
+    metalness: 1,
+    emissive: new Color('#1c0e00'),
+    emissiveIntensity: 0.25,
+    ...transparent,
+  })
   const dark = new MeshStandardMaterial({
     color: new Color('#05070a'),
     roughness: 0.9,
@@ -156,6 +167,7 @@ export function createInternalsMaterials(dressed = false): InternalsMaterialSet 
     housing,
     coil,
     dark,
+    vapor,
     coilRing,
     dieMark,
     dieFloor,

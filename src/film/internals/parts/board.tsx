@@ -60,7 +60,11 @@ export function BoardPart({
     return mesh
   }, [materials])
 
-  const discretes = [...BOARD_PARTS.slice(1), ...SUB_PARTS]
+  // Discrete components, each its own exploding part. btb-up/btb-low are
+  // rendered as connectors in the flex group above, not here.
+  const discretes = [...BOARD_PARTS.slice(1), ...SUB_PARTS].filter(
+    (part) => part.id !== 'btb-up' && part.id !== 'btb-low',
+  )
 
   return (
     <group userData={{ part: 'board', readout: '12-layer main board' }}>
@@ -160,7 +164,7 @@ export function BoardPart({
       <group ref={register('vapor-chamber')}>
         <mesh position={[VAPOR_CHAMBER.cx, VAPOR_CHAMBER.cy, VAPOR_CHAMBER.cz]}>
           <boxGeometry args={[VAPOR_CHAMBER.w, VAPOR_CHAMBER.h, VAPOR_CHAMBER.thickness]} />
-          <primitive object={materials.coil} attach="material" />
+          <primitive object={materials.vapor} attach="material" />
         </mesh>
       </group>
       {/* Graphite spreader: near-black, almost no specular, barely tumbles */}

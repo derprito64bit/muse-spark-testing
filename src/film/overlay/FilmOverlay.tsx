@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, useMotionValueEvent, type MotionValue } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { Glass } from '../../components/Glass/Glass.tsx'
-import { CHAPTERS } from '../chapters.ts'
+import { CHAPTERS, TEARDOWN_COPY } from '../chapters.ts'
 import { inspectHit } from '../inspect.ts'
-import { stageColors } from '../stage/stageColors.ts'
+import { scrimForStage, stageColors } from '../stage/stageColors.ts'
+import { TEARDOWN_LAYERS, cursorAt } from '../teardown/layers.ts'
 import { ACTS } from '../timeline.ts'
 import { useChapter } from '../useChapter.ts'
 import { BigNumeral } from './BigNumeral.tsx'
@@ -27,6 +28,18 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
   const [scrolled, setScrolled] = useState(false)
   const [readout, setReadout] = useState<string | null>(null)
   const chapter = CHAPTERS.find((c) => c.act === act.id) ?? CHAPTERS[0]
+  // Teardown layer cursor: ten copy cards ride the feature run. HTML only.
+  // Derived from progress directly, never from the act closure: on a ?t=
+  // deep link the scroll jumps once while the act state is still stale,
+  // which would wedge the copy on layer zero forever.
+  const [layerIndex, setLayerIndex] = useState(0)
+  useMotionValueEvent(progress, 'change', (p) => {
+    const v = typeof p === 'number' ? p : 0
+    if (v < 0.25 || v >= 0.52) return
+    setLayerIndex(Math.min(9, Math.max(0, Math.floor(cursorAt(v)))))
+  })
+  const layerCopy = act.id === 'teardown' ? TEARDOWN_COPY[layerIndex] : undefined
+  const layerAccent = act.id === 'teardown' ? TEARDOWN_LAYERS[layerIndex]?.accent : undefined
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -35,7 +48,7 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
   }, [])
 
   useEffect(() => {
-    if (act.id !== 'xray' && act.id !== 'rebuild') {
+    if (act.id !== 'teardown') {
       setReadout(null)
       return
     }
@@ -70,36 +83,75 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
   // opacity over the page. Written straight to the DOM, never React state.
   // Hooks stay above the empty-chapters bail so the order never changes.
   const tintRef = useRef<HTMLDivElement>(null)
+  const scrimRef = useRef<HTMLDivElement>(null)
   useMotionValueEvent(progress, 'change', (p) => {
-    const el = tintRef.current
-    if (el === null) return
-    const { base } = stageColors(typeof p === 'number' ? p : 0)
-    el.style.backgroundColor = `#${base.getHexString()}2e`
+    const v = typeof p === 'number' ? p : 0
+    const { base } = stageColors(v)
+    const baseHex = `#${base.getHexString()}`
+    const tint = tintRef.current
+    if (tint !== null) tint.style.backgroundColor = `${baseHex}2e`
+    // Contrast scrim (Prompt D section 11): strengthens as the stage
+    // brightens so text clears 4.5:1 everywhere (tested, not vibed).
+    const scrim = scrimRef.current
+    if (scrim !== null) scrim.style.opacity = String(scrimForStage(baseHex))
   })
   if (chapter === undefined) return null
   return (
     <div className="pointer-events-none absolute inset-0" aria-live="polite">
       <div ref={tintRef} aria-hidden="true" className="absolute inset-0" />
       <div
+        ref={scrimRef}
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(105deg, rgba(5,6,10,0.92) 0%, rgba(5,6,10,0.92) 38%, rgba(5,6,10,0) 68%)',
+          opacity: 0,
+        }}
+      />
+      <div
         data-align={act.align}
         data-testid="film-chapter"
         data-act={act.id}
-        className="absolute inset-x-0 bottom-24 flex justify-center px-6 text-center data-[align=left]:justify-start data-[align=left]:text-left data-[align=right]:justify-end data-[align=right]:text-right md:inset-x-16"
+        className={
+          act.id === 'teardown'
+            ? // Fixed two-column split: text left 42%, subject right 58% (the
+              // camera holds the right side). Under 900px the text drops to
+              // the lower 45% and the stack shifts up via the compact gap.
+              'absolute inset-x-0 bottom-0 flex justify-center px-6 pb-24 text-center md:bottom-auto md:left-16 md:right-auto md:top-1/2 md:w-[42%] md:-translate-y-1/2 md:justify-start md:px-0 md:pb-0 md:text-left'
+            : 'absolute inset-x-0 bottom-24 flex justify-center px-6 text-center data-[align=left]:justify-start data-[align=left]:text-left data-[align=right]:justify-end data-[align=right]:text-right md:inset-x-16'
+        }
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={act.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
+            key={act.id === 'teardown' ? `teardown-${layerIndex}` : act.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
             className="max-w-xl"
           >
-            <Kicker>{chapter.kicker}</Kicker>
-            <Headline>{chapter.headline}</Headline>
-            <p className="mt-3 text-base text-(--color-dim)">{chapter.body}</p>
-            {chapter.numeral !== undefined ? <BigNumeral numeral={chapter.numeral} /> : null}
-            {chapter.spec !== undefined ? <SpecLines lines={chapter.spec} /> : null}
+            {layerCopy !== undefined ? (
+              <>
+                <div
+                  aria-hidden="true"
+                  className="mb-3 h-px w-10"
+                  style={{ backgroundColor: layerAccent ?? '#7fb4ff' }}
+                />
+                <Kicker>{layerCopy.kicker}</Kicker>
+                <Headline>{layerCopy.headline}</Headline>
+                <p className="mt-3 text-base text-(--color-dim)">{layerCopy.body}</p>
+                <p className="spec-tech mt-3 text-(--color-dim)">{layerCopy.figure}</p>
+              </>
+            ) : (
+              <>
+                <Kicker>{chapter.kicker}</Kicker>
+                <Headline>{chapter.headline}</Headline>
+                <p className="mt-3 text-base text-(--color-dim)">{chapter.body}</p>
+                {chapter.numeral !== undefined ? <BigNumeral numeral={chapter.numeral} /> : null}
+                {chapter.spec !== undefined ? <SpecLines lines={chapter.spec} /> : null}
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -112,7 +164,7 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
         </div>
       ) : null}
 
-      {(act.id === 'xray' || act.id === 'rebuild') && <Callouts progress={progress} />}
+      {act.id === 'teardown' && <Callouts progress={progress} />}
 
       <nav
         aria-label="Film acts"

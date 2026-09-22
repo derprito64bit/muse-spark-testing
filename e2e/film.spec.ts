@@ -14,11 +14,11 @@ test('film runway renders chapters without console errors', async ({ page }) => 
   expect(errors).toEqual([])
 })
 
-test('film ?t= deep link jumps to the chip act', async ({ page }) => {
-  await page.goto('/?t=0.42')
+test('film ?t= deep link jumps to the teardown act', async ({ page }) => {
+  await page.goto('/?t=0.4')
   const chapter = page.getByTestId('film-chapter')
   await expect(chapter).toBeVisible()
-  await expect(chapter).toHaveAttribute('data-act', 'chip', { timeout: 15000 })
+  await expect(chapter).toHaveAttribute('data-act', 'teardown', { timeout: 15000 })
 })
 
 test('film static fallback renders every act without WebGL', async ({ page }) => {

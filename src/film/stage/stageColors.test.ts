@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { stageColors } from './stageColors.ts'
+import { TEARDOWN_LAYERS } from '../teardown/layers.ts'
+import { applyScrim, contrastRatio, scrimForStage, stageColors } from './stageColors.ts'
 
 /** Stage colour journey (Prompt D section 8.2): continuous and reversible. */
 describe('stageColors', () => {
@@ -29,6 +30,38 @@ describe('stageColors', () => {
       const b = stageColors(p).base.getHexString()
       expect(a).toBe(b)
       expect(stageColors(p).top.getHexString()).toBe(stageColors(p).top.getHexString())
+    }
+  })
+
+  it('clears text contrast at 24 points across the film (Prompt D 11)', () => {
+    // Primary text 4.5:1, headline 7:1, over the scrimmed stage.
+    for (let i = 0; i < 24; i++) {
+      const p = i / 23
+      const base = `#${stageColors(p).base.getHexString()}`
+      const top = `#${stageColors(p).top.getHexString()}`
+      for (const backdrop of [base, top]) {
+        const effective = applyScrim(backdrop, scrimForStage(backdrop))
+        expect(contrastRatio('#f2f2f4', effective), `ink at p=${p}`).toBeGreaterThanOrEqual(4.5)
+        expect(contrastRatio('#f2f2f4', effective), `headline at p=${p}`).toBeGreaterThanOrEqual(7)
+        expect(contrastRatio('#9c9da7', effective), `dim at p=${p}`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  it('clears every layer accent 3:1 against its own stage range', () => {
+    // Accents light the rim and draw a rule; they never carry text (text
+    // wears ink per the dataviz rule), so the technical 3:1 floor applies,
+    // not the 4.5 text gate. Accents only appear during teardown.
+    for (let i = 0; i <= 20; i++) {
+      const p = 0.25 + (i / 20) * 0.27
+      const base = `#${stageColors(p).base.getHexString()}`
+      const effective = applyScrim(base, scrimForStage(base))
+      for (const layer of TEARDOWN_LAYERS) {
+        expect(
+          contrastRatio(layer.accent, effective),
+          `${layer.id} accent at p=${p}`,
+        ).toBeGreaterThanOrEqual(3)
+      }
     }
   })
 })

@@ -182,16 +182,19 @@ const RAW: RawEntry[] = [
   ...MECH.map((mech) => register(mech.id, [mech.x, mech.y, -0.0012], 0.007, 9, 0.45, 'power')),
   register('main-board', [MAIN_BOARD.cx, MAIN_BOARD.cy, MAIN_BOARD.cz], 0.005, 10, 0.3, 'board'),
   // Board components fan outward so labels can place between them.
-  ...[...BOARD_PARTS.slice(1), ...SUB_PARTS].map((part, i) =>
-    register(
-      part.id,
-      [part.x, part.y, REAR_Z - part.z / 2],
-      0.005 + (i % 3) * 0.0008,
-      11,
-      0.55,
-      'board',
+  // btb-up/btb-low render as connectors inside the flex group, not here.
+  ...[...BOARD_PARTS.slice(1), ...SUB_PARTS]
+    .filter((part) => part.id !== 'btb-up' && part.id !== 'btb-low')
+    .map((part, i) =>
+      register(
+        part.id,
+        [part.x, part.y, REAR_Z - part.z / 2],
+        0.005 + (i % 3) * 0.0008,
+        11,
+        0.55,
+        'board',
+      ),
     ),
-  ),
   register('decoupling-cluster', [SOC[0], SOC[1], SOC[2]], 0.006, 11, 0.55, 'silicon'),
   register('substrate', [SOC[0], SOC[1], SOC[2]], 0.006, 11, 0.4, 'silicon'),
   register('die', [SOC[0], SOC[1], SOC[2]], 0.009, 11, 0.4, 'silicon', {

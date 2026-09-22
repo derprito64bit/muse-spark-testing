@@ -1,7 +1,7 @@
 import { useMotionValue, useScroll, type MotionValue } from 'motion/react'
 import { Suspense, lazy, useEffect, useRef, useState, type RefObject } from 'react'
 import { PhoneFrame } from '../components/Phone/PhoneFrame.tsx'
-import { CHAPTERS } from './chapters.ts'
+import { CHAPTERS, TEARDOWN_COPY } from './chapters.ts'
 import { FilmOverlay } from './overlay/FilmOverlay.tsx'
 
 const FilmCanvasLazy = lazy(() =>
@@ -109,25 +109,59 @@ export function Film() {
         data-testid="film-fallback"
       >
         <h1 className="sr-only">Aether One X: power, without the noise.</h1>
-        {CHAPTERS.map((chapter) => (
-          <article
-            key={chapter.act}
-            aria-label={`Act ${chapter.act}`}
-            className="grid gap-6 py-12 md:grid-cols-2"
-          >
-            <div>
-              <p className="kicker">{chapter.kicker}</p>
-              <h2 className="spec-num mt-3 text-4xl">{chapter.headline}</h2>
-              <p className="mt-3 text-(--color-dim)">{chapter.body}</p>
+        {CHAPTERS.map((chapter) =>
+          chapter.act === 'teardown' ? (
+            // The teardown is information, not decoration: the static story
+            // carries all ten layers with their copy.
+            <div key="teardown-layers">
+              <article aria-label="Act teardown" className="grid gap-6 py-12 md:grid-cols-2">
+                <div>
+                  <p className="kicker">{chapter.kicker}</p>
+                  <h2 className="spec-num mt-3 text-4xl">{chapter.headline}</h2>
+                  <p className="mt-3 text-(--color-dim)">{chapter.body}</p>
+                </div>
+              </article>
+              {TEARDOWN_COPY.map((layer, i) => (
+                <article
+                  key={layer.key}
+                  aria-label={`Teardown layer ${layer.key}`}
+                  className="grid gap-6 py-12 md:grid-cols-2"
+                >
+                  <div>
+                    <p className="kicker">{layer.kicker}</p>
+                    <h2 className="spec-num mt-3 text-4xl">{layer.headline}</h2>
+                    <p className="mt-3 text-(--color-dim)">{layer.body}</p>
+                    <p className="spec-tech mt-3">{layer.figure}</p>
+                  </div>
+                  <div className="flex justify-center">
+                    <PhoneFrame
+                      face={i >= 8 ? 'rear' : 'front'}
+                      label={`${layer.headline} (static view)`}
+                    />
+                  </div>
+                </article>
+              ))}
             </div>
-            <div className="flex justify-center">
-              <PhoneFrame
-                face={chapter.act === 'camera' ? 'rear' : 'front'}
-                label={`${chapter.headline} (static view)`}
-              />
-            </div>
-          </article>
-        ))}
+          ) : (
+            <article
+              key={chapter.act}
+              aria-label={`Act ${chapter.act}`}
+              className="grid gap-6 py-12 md:grid-cols-2"
+            >
+              <div>
+                <p className="kicker">{chapter.kicker}</p>
+                <h2 className="spec-num mt-3 text-4xl">{chapter.headline}</h2>
+                <p className="mt-3 text-(--color-dim)">{chapter.body}</p>
+              </div>
+              <div className="flex justify-center">
+                <PhoneFrame
+                  face={chapter.act === 'camera' ? 'rear' : 'front'}
+                  label={`${chapter.headline} (static view)`}
+                />
+              </div>
+            </article>
+          ),
+        )}
         {contextLost && (
           <p role="status" className="text-sm text-(--color-dim)">
             3D paused after a graphics reset. Static story shown.

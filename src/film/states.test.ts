@@ -46,16 +46,25 @@ describe('film states', () => {
     for (let i = 0; i <= 1000; i++) {
       const s = computeFilmStates(i / 1000)
       for (const [name, value] of Object.entries(s)) {
+        if (name === 'layerCursor') {
+          expect(value, `${name} at p=${i / 1000}`).toBeGreaterThanOrEqual(0)
+          expect(value, `${name} at p=${i / 1000}`).toBeLessThanOrEqual(10)
+          continue
+        }
         expect(value, `${name} at p=${i / 1000}`).toBeGreaterThanOrEqual(0)
         expect(value, `${name} at p=${i / 1000}`).toBeLessThanOrEqual(1)
       }
     }
   })
 
-  it('returns every scalar to 0 at the end except screenOn', () => {
+  it('returns every scalar to 0 at the end except screenOn, layerCursor, and stageRamp', () => {
     const end = computeFilmStates(1)
     for (const [name, value] of Object.entries(end)) {
+      // screenOn stays lit, the cursor parks at the last layer, and the
+      // stage keeps its arrival lightness: monotonic journeys, not windows.
       if (name === 'screenOn') expect(value).toBeGreaterThan(0)
+      else if (name === 'layerCursor') expect(value).toBe(10)
+      else if (name === 'stageRamp') expect(value).toBe(1)
       else expect(value, name).toBe(0)
     }
   })

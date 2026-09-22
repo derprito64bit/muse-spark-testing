@@ -3,6 +3,8 @@ import {
   CAMERA_LENSES,
   CHIPSET,
   DISPLAY,
+  FINISHES,
+  FRAME_MATERIAL,
   MEMORY,
   PERFORMANCE,
   STORAGE_OPTIONS,
@@ -50,24 +52,12 @@ export const CHAPTERS: Chapter[] = [
     body: 'The display runs to the frame on all four sides.',
   },
   {
-    act: 'xray',
+    act: 'teardown',
     kicker: 'Inside',
-    headline: 'Every layer earns its place.',
-    body: 'Board, silicon, cell, and optics. Hover to inspect each part.',
-  },
-  {
-    act: 'chip',
-    kicker: CHIPSET.name,
-    headline: `${CHIPSET.processNm} nm. ${CHIPSET.cpuCores} cores. Zero noise.`,
-    body: `A ${CHIPSET.dieAreaMm2} mm2 die with a ${CHIPSET.gpuCores}-core GPU and a dedicated neural engine.`,
+    headline: 'Ten layers. One by one.',
+    body: `The stack opens flat: board, a ${CHIPSET.dieAreaMm2} mm² ${CHIPSET.name} die, cell, and optics, one layer at a time.`,
     numeral: { value: formatNumber(PERFORMANCE.cpu.hero.value), unit: PERFORMANCE.cpu.hero.suffix },
     spec: [`NPU ${PERFORMANCE.npu.hero.value} ${PERFORMANCE.npu.hero.suffix} on-device`],
-  },
-  {
-    act: 'rebuild',
-    kicker: 'Assembly',
-    headline: 'Sealed in a single motion.',
-    body: 'The stack repacks, the shell closes, nothing shifts.',
   },
   {
     act: 'camera',
@@ -123,10 +113,94 @@ export const CHAPTERS: Chapter[] = [
 ]
 
 /**
- * Exploded-diagram callouts (Prompt C section 4.6). Nine labels maximum:
- * only parts a general audience can care about. Screws, coax, RF modules,
- * and connectors are texture, not information, and stay unlabeled. Copy
- * lives here as data, never inline in JSX.
+ * Teardown layer copy (Prompt D section 6). One kicker, one headline, one
+ * sentence, one figure per layer. Every figure comes from src/data so the
+ * film and the specifications page can never disagree.
+ */
+export interface TeardownCopy {
+  key: string
+  kicker: string
+  headline: string
+  body: string
+  figure: string
+}
+
+export const TEARDOWN_COPY: TeardownCopy[] = [
+  {
+    key: 'cover-glass',
+    kicker: 'Cover glass',
+    headline: 'The surface you touch.',
+    body: 'Ion glass with an oleophobic coat. What it reflects is the room around you.',
+    figure: `${DISPLAY.pwm} Hz dimming`,
+  },
+  {
+    key: 'display',
+    kicker: 'Display',
+    headline: 'Light, controlled.',
+    body: 'LTPO panel under matte bezel ink. Bright when it must be, dark otherwise.',
+    figure: `${formatNumber(DISPLAY.peakNits)} nits peak`,
+  },
+  {
+    key: 'midframe',
+    kicker: 'Midframe',
+    headline: 'The structure.',
+    body: 'Everything mounts to this frame. Eight Torx screws hold the story together.',
+    figure: FRAME_MATERIAL,
+  },
+  {
+    key: 'battery',
+    kicker: 'Battery',
+    headline: 'Two days of charge.',
+    body: 'Silicon-carbon cell, the heaviest thing in the phone. It moves like it.',
+    figure: `${formatNumber(BATTERY.capacity)} mAh`,
+  },
+  {
+    key: 'logic-board',
+    kicker: 'Logic board',
+    headline: 'The system.',
+    body: 'Main and sub boards joined by flex, shielded can by can against their own noise.',
+    figure: `${MEMORY.ramGb} GB RAM`,
+  },
+  {
+    key: 'silicon',
+    kicker: CHIPSET.name,
+    headline: 'The hero beat.',
+    body: `A ${CHIPSET.dieAreaMm2} mm2 die that runs every model on-device. Nothing leaves the phone.`,
+    figure: `${PERFORMANCE.npu.hero.value} ${PERFORMANCE.npu.hero.suffix} neural engine`,
+  },
+  {
+    key: 'thermal',
+    kicker: 'Thermal',
+    headline: 'Sustained, not spiky.',
+    body: 'Vapour chamber over the die, graphite spreading it wide. Peak clocks hold.',
+    figure: `${CHIPSET.processNm} nm efficiency`,
+  },
+  {
+    key: 'power-coil',
+    kicker: 'Power coil',
+    headline: 'Charge through the case.',
+    body: 'Eighteen turns of litz copper ringed by NFC. No port required.',
+    figure: `${BATTERY.wireless} W wireless`,
+  },
+  {
+    key: 'camera',
+    kicker: 'Camera module',
+    headline: 'Four optics, one circle.',
+    body: 'Triangle lenses plus a folded periscope, each at its own physical depth.',
+    figure: CAMERA_LENSES[3]?.label ?? '135 mm folded tele',
+  },
+  {
+    key: 'rear-panel',
+    kicker: 'Rear panel',
+    headline: 'The finish.',
+    body: 'Ceramic, brushed, glass, anodised, textured, or clear. Pick yours below.',
+    figure: `${FINISHES.length} finishes`,
+  },
+]
+
+/**
+ * Exploded-diagram callouts. Nine labels maximum: only parts a general
+ * audience can care about. Copy lives here as data, never inline in JSX.
  */
 export const CALLOUTS: CalloutDef[] = [
   {

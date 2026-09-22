@@ -36,7 +36,9 @@ interface PhoneModelProps {
   /** Optional per-instance material set (the film passes its own for x-ray). */
   materials?: PhoneMaterialSet
   /** Optional shell sub-groups so a director can part the layers. */
-  groups?: Partial<Record<'frame' | 'back' | 'glass', MutableRefObject<THREE.Group | null>>>
+  groups?: Partial<
+    Record<'frame' | 'back' | 'glass' | 'display' | 'module', MutableRefObject<THREE.Group | null>>
+  >
   /** Animated focus ring on the active lens. The film disables this. */
   animateFocusRing?: boolean
   /**
@@ -232,12 +234,14 @@ function PhoneModelInner({
         <mesh geometry={backSlabGeometry} position={[0, 0, BACK_PANEL.z]}>
           <primitive object={set.back} attach="material" />
         </mesh>
-        <CameraAssembly
-          materials={set}
-          lensRefs={lensRefs}
-          detail={detail}
-          separation={opticsSeparation}
-        />
+        <group ref={groups?.module}>
+          <CameraAssembly
+            materials={set}
+            lensRefs={lensRefs}
+            detail={detail}
+            separation={opticsSeparation}
+          />
+        </group>
         {/* Two-material rear panel (Prompt A2 section 8): recessed groove
             plus a proud textured lower panel. Per finish, not global. */}
         {FINISH_PARAMS[finish].panelSplit === true ? (
@@ -283,6 +287,9 @@ function PhoneModelInner({
         <mesh geometry={glassSlabGeometry} position={[0, 0, FRONT_GLASS.z]}>
           <primitive object={set.screen} attach="material" />
         </mesh>
+        <FrontGlassDetails set={set} />
+      </group>
+      <group ref={groups?.display}>
         <mesh geometry={bezelGeometry}>
           <primitive object={set.bezel} attach="material" />
         </mesh>
@@ -297,7 +304,6 @@ function PhoneModelInner({
             <primitive object={set.subpixel} attach="material" />
           </mesh>
         ) : null}
-        <FrontGlassDetails set={set} />
       </group>
     </group>
   )

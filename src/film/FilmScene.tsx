@@ -54,6 +54,8 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
   const frame = useRef<THREE.Group | null>(null)
   const back = useRef<THREE.Group | null>(null)
   const glass = useRef<THREE.Group | null>(null)
+  const display = useRef<THREE.Group | null>(null)
+  const module = useRef<THREE.Group | null>(null)
   const internals = useRef<THREE.Group | null>(null)
   const keyLight = useRef<THREE.DirectionalLight | null>(null)
   const fillLight = useRef<THREE.DirectionalLight | null>(null)
@@ -71,6 +73,10 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
     energy: 0,
     shieldLift: 0,
     coilRing: 0,
+    stackSeparate: 0,
+    layerCursor: 0,
+    teardownGap: 0.0085,
+    reducedMotion: false,
   })
   const opticsSeparation = useRef<Record<string, THREE.Group | null>>({})
   // TEMP-DEBUG diagnosis hook. Removed before merge.
@@ -125,6 +131,8 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
       frame,
       back,
       glass,
+      display,
+      module,
       internals,
       internalsControl,
       keyLight,
@@ -169,7 +177,7 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
         <PhoneConfigProvider>
           <PhoneModel
             materials={materials}
-            groups={{ frame, back, glass }}
+            groups={{ frame, back, glass, display, module }}
             animateFocusRing={false}
             opticsSeparation={opticsSeparation}
           />

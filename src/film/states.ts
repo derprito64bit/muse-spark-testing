@@ -43,6 +43,16 @@ export interface FilmStates {
   shieldLift: number
   /** 0..1 coil LED ring brightness for the Clear finish. */
   coilRing: number
+  /** 0..1 phone rotates from upright to flat (teardown). */
+  layDown: number
+  /** 0..1 layers separate into the stack (teardown). */
+  stackSeparate: number
+  /** 0..10 continuous layer cursor across the feature run (teardown). */
+  layerCursor: number
+  /** 0..1 how strongly unfeatured layers recede (teardown). */
+  contextRecede: number
+  /** 0..1 stage lightness ramp across the teardown sequence. */
+  stageRamp: number
 }
 
 /**
@@ -77,6 +87,11 @@ const STATES: FilmStates = {
   macroAtmos: 0,
   shieldLift: 0,
   coilRing: 0,
+  layDown: 0,
+  stackSeparate: 0,
+  layerCursor: 0,
+  contextRecede: 0,
+  stageRamp: 0,
 }
 
 /**
@@ -125,5 +140,19 @@ export function computeFilmStates(p: number): FilmStates {
   // follows the energy beat: it is the charging indicator.
   STATES.shieldLift = ramplike(p, 0.315, 0.345, 0.47, 0.5)
   STATES.coilRing = ramplike(p, 0.885, 0.9, 0.91, 0.93)
+  // Teardown sequence (Prompt D section 9.1): lay down, separate and hold,
+  // ten feature windows, restack and stand. layerCursor is a single
+  // continuous float: integer part is the current layer, fraction is local
+  // progress. Everything per-layer derives from it and reverses exactly.
+  STATES.layDown = ramplike(p, 0.25, 0.265, 0.5, 0.52)
+  STATES.stackSeparate = ramplike(p, 0.272, 0.295, 0.485, 0.5)
+  // Snap float dust to integers: (0.315 - 0.295) / 0.02 is 1.0000000000000009
+  // in binary, which would trip the [0, 10] range test by an ulp.
+  const rawCursor = (p - 0.295) / 0.02
+  const snapped =
+    Math.abs(rawCursor - Math.round(rawCursor)) < 1e-9 ? Math.round(rawCursor) : rawCursor
+  STATES.layerCursor = Math.min(10, Math.max(0, snapped))
+  STATES.contextRecede = ramplike(p, 0.295, 0.31, 0.48, 0.495)
+  STATES.stageRamp = Math.min(1, Math.max(0, (p - 0.25) / 0.27))
   return STATES
 }

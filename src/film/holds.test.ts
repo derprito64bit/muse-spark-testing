@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CAMERA_KEYS } from './acts/camera.ts'
-import { CHIP_KEYS } from './acts/chip.ts'
+import { TEARDOWN_KEYS } from './acts/teardown.ts'
 import type { FilmKey } from './key.ts'
 import { sampleFilm } from './sample.ts'
 import { ACTS } from './timeline.ts'
@@ -17,13 +17,14 @@ function vecDelta(a: [number, number, number], b: [number, number, number]): num
 
 /** Closeup holds: the camera must be nearly static so the eye can land. */
 describe('closeup holds', () => {
-  it('locks the chip camera from 0.432 to 0.440', () => {
-    const a = byAt(CHIP_KEYS, 0.432)
-    const b = byAt(CHIP_KEYS, 0.44)
-    expect(vecDelta(a.camera.pos, b.camera.pos)).toBe(0)
-    expect(vecDelta(a.camera.target, b.camera.target)).toBe(0)
-    expect(Math.abs(a.pose.rx - b.pose.rx)).toBeLessThanOrEqual(0.01)
-    expect(a.pose.scale).toBe(b.pose.scale)
+  it('holds the separated stack from 0.272 to 0.295 before any flip', () => {
+    // The establishing hold: full stack legible before layer zero moves.
+    const a = byAt(TEARDOWN_KEYS, 0.272)
+    const b = byAt(TEARDOWN_KEYS, 0.295)
+    expect(vecDelta(a.camera.pos, b.camera.pos)).toBeLessThan(0.02)
+    expect(vecDelta(a.camera.target, b.camera.target)).toBeLessThan(0.005)
+    expect(a.pose.rx).toBe(b.pose.rx)
+    expect(a.pose.ry).toBe(b.pose.ry)
   })
 
   it('locks the macro camera from 0.685 to 0.705', () => {

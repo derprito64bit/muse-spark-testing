@@ -59,6 +59,32 @@ pair per material set). `disposePhoneMaterials` covers every slot;
 `SceneDisposer` frees geometries on unmount; the studio environment owns
 and releases its PMREM target per canvas.
 
+New A2 maps: collar annulus 2048² (~16MB, the largest single map —
+roughness domain), micro-text 1024² (~4MB), medallion brush 256²,
+knurl normal + rough 256×64, bezel grain 512×1024 with alpha feather.
+Total texture memory roughly 25MB per material set; film and configurator
+own separate sets.
+
+## Frame time
+
+SwiftShader (software GL) lower-bounds only — see the open M10 thread for
+the real-GPU 55fps trace. The film snapshot suite (`e2e/film.spec.ts`)
+plus the budget test above are the merge gates until then.
+
+Teardown window (measured 2026-09-21, SwiftShader CPU GL, full-runway
+scroll): 4.2fps avg, 300ms worst frame. Same class as the pre-teardown
+3.9–7.3fps band on this renderer: the stage sphere, ContactShadows pass,
+and per-part loops cost real time on CPU GL, but nothing in the profile
+points at a device-GPU problem. Cyclorama + floor + one shadow pass;
+no SSR, no DoF (both rejected pending measurement).
+
+## Triangle budget, circular module era (measured)
+
+LOD0 total 39,864 (budget 120k): cameraModule 15,290 (knurl 192 instanced
+teeth, three tunnels, medallion, periscope, ToF), bezel 512. LOD1 32,290
+(knurl to maps, one baffle, no ToF internals). All in
+`phoneBudget.test.ts`, which mirrors constructors one to one.
+
 ## Frame time
 
 SwiftShader (software GL) lower-bounds only — see the open M10 thread for

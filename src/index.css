@@ -51,18 +51,20 @@
 
   @media (min-width: 1024px) {
     :root {
-      --film-height: 1500vh;
+      /* 1900svh gives the teardown's ten layers ~38vh each without moving
+         a single act boundary, because every boundary is a fraction. */
+      --film-height: 1900vh;
     }
   }
 
   @supports (height: 100svh) {
     :root {
-      --film-height: 1100svh;
+      --film-height: 1400svh;
     }
 
     @media (min-width: 1024px) {
       :root {
-        --film-height: 1500svh;
+        --film-height: 1900svh;
       }
     }
   }

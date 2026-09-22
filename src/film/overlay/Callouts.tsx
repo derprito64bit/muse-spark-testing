@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { EXPLODE_PARTS, partProgress } from '../internals/explode.ts'
 import { CALLOUTS } from '../chapters.ts'
 import { computeFilmStates } from '../states.ts'
+import { cursorAt } from '../teardown/layers.ts'
 import { calloutBridge, layoutCallouts, type CalloutLayout } from './callouts.ts'
 
 const ENTRY_TRAVEL = 14
@@ -53,7 +54,16 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const p = progress.get()
       const st = computeFilmStates(p)
-      const active = st.calloutOpacity > 0.01 && calloutBridge.camera !== null && rect.current.w > 0
+      // During the teardown feature run the layer copy carries the story,
+      // so callouts only bracket it: establishing stack and restack. Nine
+      // simultaneous labels over a featured layer is clutter, not diagram.
+      const cursor = cursorAt(p)
+      const inFeatureRun = p >= 0.25 && p < 0.52 && cursor > 0.5 && cursor < 9.5
+      const active =
+        st.calloutOpacity > 0.01 &&
+        !inFeatureRun &&
+        calloutBridge.camera !== null &&
+        rect.current.w > 0
       layer.style.display = active ? 'block' : 'none'
       if (!active) return
 
