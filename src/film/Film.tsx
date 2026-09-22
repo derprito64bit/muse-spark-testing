@@ -3,6 +3,7 @@ import { Suspense, lazy, useEffect, useRef, useState, type RefObject } from 'rea
 import { PhoneFrame } from '../components/Phone/PhoneFrame.tsx'
 import { CHAPTERS, TEARDOWN_COPY } from './chapters.ts'
 import { FilmOverlay } from './overlay/FilmOverlay.tsx'
+import { progressFromUrl, scrollToProgress } from './scroll.ts'
 
 const FilmCanvasLazy = lazy(() =>
   import('./FilmCanvas.tsx').then((m) => ({ default: m.FilmCanvas })),
@@ -14,17 +15,6 @@ function webglAvailable(): boolean {
     return canvas.getContext('webgl2') !== null || canvas.getContext('webgl') !== null
   } catch {
     return false
-  }
-}
-
-function progressFromUrl(): number | null {
-  try {
-    const t = new URLSearchParams(window.location.search).get('t')
-    if (t === null) return null
-    const v = Number.parseFloat(t)
-    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : null
-  } catch {
-    return null
   }
 }
 
@@ -93,12 +83,7 @@ export function Film() {
     const t = progressFromUrl()
     const runwayEl = runway.current
     if (t === null || runwayEl === null) return
-    const rect = runwayEl.getBoundingClientRect()
-    const top = rect.top + window.scrollY
-    window.scrollTo({
-      top: top + t * (rect.height - window.innerHeight),
-      behavior: 'instant' as ScrollBehavior,
-    })
+    scrollToProgress(runwayEl, t, 'instant')
   }, [])
 
   if (showFallback) {
@@ -202,7 +187,7 @@ export function Film() {
             onContextLost={() => setContextLost(true)}
           />
         </Suspense>
-        <FilmOverlay progress={progress} />
+        <FilmOverlay progress={progress} runway={runway} />
       </div>
     </section>
   )

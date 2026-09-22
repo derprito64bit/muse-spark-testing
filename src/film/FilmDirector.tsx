@@ -207,9 +207,8 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     fill: 0.7,
     rim: 1.1,
     accent: 0,
-    tint: new THREE.Color('#ffffff'),
-    tintTarget: new THREE.Color('#ffffff'),
     accentTarget: new THREE.Color('#ffffff'),
+    accentColor: new THREE.Color('#ffffff'),
     teardown: { detach: 0, turn: 0, scale: 0 } as FeatureFrame,
     prepared: false,
   })
@@ -227,6 +226,11 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const t = sampleFilm(p)
     const st = computeFilmStates(p)
     const act = actAt(p).id
+    // Featured teardown layer, derived once per frame (round 03 Part C):
+    // the lighting block and the teardown driver share it, so neither
+    // recomputes or re-decides it later.
+    const featured =
+      st.layerCursor > 0.02 && st.layerCursor < 9.99 ? Math.min(9, Math.floor(st.layerCursor)) : -1
 
     const shot = SHOTS[act] ?? SHOTS.arrival
     const damp = reduced ? 1 : 1 - Math.exp(-delta * shot.dampPerSecond)
@@ -409,16 +413,23 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     s.fill += (light.fill - s.fill) * ld
     s.rim += (light.rim - s.rim) * ld
     s.env += (light.env - s.env) * ld
-    // Camera-act accent rakes the collar chamfer; elsewhere it rests at zero.
-    // Focus pulls borrow it briefly so the subject owns the light.
-    s.accent += ((act === 'camera' ? 1.6 : 0) + st.focusPull * 0.8 - s.accent) * ld
-    s.tint.lerp(s.tintTarget.set(light.envTint), ld)
+    // Camera-act accent rakes the collar chamfer; focus pulls borrow it
+    // briefly so the subject owns the light. Single writer for the accent
+    // light (round 03 Part C): decide the goal, damp the persistent
+    // scratch toward it, write once. The teardown branch no longer touches
+    // the light, so the damped value converges on the layer accent instead
+    // of resetting to stage tint every frame (it ran at ~8% before).
+    const featuredAccent = featured >= 0 ? TEARDOWN_LAYERS[featured]?.accent : undefined
+    s.accentTarget.set(featuredAccent ?? light.envTint)
+    s.accentColor.lerp(s.accentTarget, ld)
+    const accentGoal = featured >= 0 ? 1.4 : (act === 'camera' ? 1.6 : 0) + st.focusPull * 0.8
+    s.accent += (accentGoal - s.accent) * ld
     if (refs.keyLight.current !== null) refs.keyLight.current.intensity = s.key
     if (refs.fillLight.current !== null) refs.fillLight.current.intensity = s.fill
     if (refs.rimLight.current !== null) refs.rimLight.current.intensity = s.rim
     if (refs.accentLight.current !== null) {
       refs.accentLight.current.intensity = s.accent
-      refs.accentLight.current.color.copy(s.tint)
+      refs.accentLight.current.color.copy(s.accentColor)
     }
     for (const name of [
       'framePX',
@@ -480,7 +491,6 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const teardownSep = st.stackSeparate
     if (teardownSep > 0.001) {
       const cursor = st.layerCursor
-      const featured = cursor > 0.02 && cursor < 9.99 ? Math.min(9, Math.floor(cursor)) : -1
       for (const layer of TEARDOWN_LAYERS) {
         featureFrame(clamp01(cursor - layer.index), layer.weight, s.teardown, reduced)
         const f = s.teardown
@@ -524,14 +534,6 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
             : base * dim
         }
       }
-      // Feature accent on the rim light; the overlay kicker matches.
-      if (featured >= 0 && refs.accentLight.current !== null) {
-        s.accentTarget.set(TEARDOWN_LAYERS[featured]?.accent ?? '#ffffff')
-        refs.accentLight.current.color.lerp(s.accentTarget, Math.min(1, delta * 5))
-        refs.accentLight.current.intensity +=
-          (1.4 - refs.accentLight.current.intensity) * Math.min(1, delta * 5)
-      }
-      if (refs.frame.current !== null) refs.frame.current.visible = true
     } else {
       // No legacy writer owns frame, display, or module: park them exactly.
       for (const grp of [refs.frame.current, refs.display.current, refs.module.current]) {

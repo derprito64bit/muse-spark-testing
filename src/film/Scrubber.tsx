@@ -1,27 +1,39 @@
 import { useCallback, useEffect, useState } from 'react'
-import { actAt } from './timeline.ts'
 import { sampleFilm } from './sample.ts'
+import { scrollToProgress, progressFromUrl } from './scroll.ts'
+import { computeFilmStates } from './states.ts'
+import { actAt } from './timeline.ts'
 
-function progressFromUrl(): number {
-  try {
-    const t = new URLSearchParams(window.location.search).get('t')
-    if (t === null) return 0
-    const v = Number.parseFloat(t)
-    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0
-  } catch {
-    return 0
-  }
+/** Stack-axis-into-view, the number Part A iterates on (round 03 Part F). */
+function stackAxisIntoView(p: number): number {
+  const s = sampleFilm(p)
+  const vx = s.target.x - s.pos.x
+  const vy = s.target.y - s.pos.y
+  const vz = s.target.z - s.pos.z
+  const m = Math.hypot(vx, vy, vz)
+  const cosRx = Math.cos(s.rx)
+  const sinRx = Math.sin(s.rx)
+  const cosRy = Math.cos(s.ry)
+  const sinRy = Math.sin(s.ry)
+  // Phone-local +z (the stack axis) through pose euler XYZ.
+  const y1 = cosRx * 0 - sinRx * 1
+  const z1 = sinRx * 0 + cosRx * 1
+  const x2 = cosRy * 0 + sinRy * z1
+  const z2 = -sinRy * 0 + cosRy * z1
+  return Math.abs((x2 * vx + y1 * vy + z2 * vz) / Math.max(1e-9, m))
 }
 
 /**
- * Dev-only timeline scrubber. Toggle with the `.` key. Slider, current act,
- * live sampled pose and camera values, and a copy-this-pose-as-keyframe
- * button that writes the object literal to the clipboard. `?t=0.42` jumps.
- * Excluded from production by the DEV guard at the call site.
+ * Dev-only timeline scrubber. Toggle with the `.` key. The slider scrolls
+ * the runway itself (round 03 Part F), so the film, overlay, and readout
+ * all follow the single scroll-driven source of truth — dragging it *is*
+ * the reverse scrub from the verification ritual. Slider, current act,
+ * teardown state, live sampled pose/camera, and a copy-this-pose button.
+ * `?t=0.42` jumps. Excluded from production by the DEV guard at the call site.
  */
 export function Scrubber() {
   const [open, setOpen] = useState(false)
-  const [progress, setProgress] = useState(progressFromUrl)
+  const [progress, setProgress] = useState(() => progressFromUrl() ?? 0)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -50,6 +62,16 @@ export function Scrubber() {
   if (!open) return null
   const sample = sampleFilm(progress)
   const act = actAt(progress)
+  const st = computeFilmStates(progress)
+
+  const onScrub = (v: number) => {
+    setProgress(v)
+    // Drive the page, not a shadow value: useScroll propagates the scroll
+    // into the film's MotionValue, so slider, film, and readout agree.
+    const runway = document.querySelector('[data-testid="film-runway"]')
+    if (runway instanceof HTMLElement) scrollToProgress(runway, v, 'auto')
+  }
+
   return (
     <div
       role="dialog"
@@ -60,13 +82,19 @@ export function Scrubber() {
         <span>t = {progress.toFixed(3)}</span>
         <span>act: {act.id}</span>
       </p>
+      <p className="flex justify-between text-(--color-dim)">
+        <span>
+          cursor {st.layerCursor.toFixed(2)} sep {st.stackSeparate.toFixed(2)}
+        </span>
+        <span>axis·view {stackAxisIntoView(progress).toFixed(3)}</span>
+      </p>
       <input
         type="range"
         min={0}
         max={1}
         step={0.001}
         value={progress}
-        onChange={(e) => setProgress(Number.parseFloat(e.target.value))}
+        onChange={(e) => onScrub(Number.parseFloat(e.target.value))}
         aria-label="Film progress"
         className="mt-2 w-full"
       />

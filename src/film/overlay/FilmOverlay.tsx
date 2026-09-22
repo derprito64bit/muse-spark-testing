@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, useMotionValueEvent, type MotionValue } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Glass } from '../../components/Glass/Glass.tsx'
 import { CHAPTERS, TEARDOWN_COPY } from '../chapters.ts'
 import { inspectHit } from '../inspect.ts'
 import { scrimForStage, stageColors } from '../stage/stageColors.ts'
+import { scrollToProgress } from '../scroll.ts'
 import { TEARDOWN_LAYERS, cursorAt } from '../teardown/layers.ts'
 import { ACTS } from '../timeline.ts'
 import { useChapter } from '../useChapter.ts'
@@ -16,6 +17,8 @@ import { XrayReadout } from './XrayReadout.tsx'
 
 interface FilmOverlayProps {
   progress: MotionValue<number>
+  /** Runway section: rail and keyboard jumps map progress through it. */
+  runway: RefObject<HTMLElement | null>
 }
 
 /**
@@ -23,29 +26,43 @@ interface FilmOverlayProps {
  * Chapters crossfade on opacity only (Jakub 200-400ms range); the rail
  * numbers a true sequence, so numbered markers encode real information.
  */
-export function FilmOverlay({ progress }: FilmOverlayProps) {
+export function FilmOverlay({ progress, runway }: FilmOverlayProps) {
   const act = useChapter(progress)
   const [scrolled, setScrolled] = useState(false)
   const [readout, setReadout] = useState<string | null>(null)
   const chapter = CHAPTERS.find((c) => c.act === act.id) ?? CHAPTERS[0]
-  // Teardown layer cursor: ten copy cards ride the feature run. HTML only.
-  // Derived from progress directly, never from the act closure: on a ?t=
-  // deep link the scroll jumps once while the act state is still stale,
-  // which would wedge the copy on layer zero forever.
-  const [layerIndex, setLayerIndex] = useState(0)
-  useMotionValueEvent(progress, 'change', (p) => {
-    const v = typeof p === 'number' ? p : 0
-    if (v < 0.25 || v >= 0.52) return
-    setLayerIndex(Math.min(9, Math.max(0, Math.floor(cursorAt(v)))))
-  })
-  const layerCopy = act.id === 'teardown' ? TEARDOWN_COPY[layerIndex] : undefined
-  const layerAccent = act.id === 'teardown' ? TEARDOWN_LAYERS[layerIndex]?.accent : undefined
-
+  // Teardown layer cards: all ten render once in a grid stack and a rAF
+  // loop writes opacity/transform straight from the continuous cursor
+  // (round 03 Part B). AnimatePresence mode="wait" wedged on fast scrolls
+  // (280ms exits vs 0.02 progress per layer); scroll-positioned cards are
+  // exactly reversible because they are a pure function of progress.
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([])
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    let raf = 0
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      const c = Math.min(cursorAt(progress.get()), 9.5)
+      for (let i = 0; i < TEARDOWN_COPY.length; i++) {
+        const el = cardRefs.current[i]
+        if (el === null || el === undefined) continue
+        const d = c - i
+        const entry = Math.min(1, Math.max(0, (d + 0.15) / 0.15))
+        const exit = Math.min(1, Math.max(0, (1 - d) / 0.1))
+        const o = entry * exit
+        el.style.opacity = String(o)
+        el.style.visibility = o <= 0.01 ? 'hidden' : 'visible'
+        el.style.transform = `translateY(${((1 - o) * 12).toFixed(2)}px)`
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [progress])
+
+  // "Scroll to play" hint: progress-driven, never a scroll listener
+  // (round 01 A10 — scroll values stay out of React state entirely).
+  useMotionValueEvent(progress, 'change', (p) => {
+    setScrolled((typeof p === 'number' ? p : 0) > 0.002)
+  })
 
   useEffect(() => {
     if (act.id !== 'teardown') {
@@ -71,13 +88,13 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
       const next = event.key === 'ArrowRight' ? ACTS[index + 1] : ACTS[index - 1]
       if (next === undefined) return
       event.preventDefault()
-      const max = document.documentElement.scrollHeight - window.innerHeight
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      window.scrollTo({ top: next.start * max, behavior: reduced ? 'instant' : 'smooth' })
+      const el = runway.current
+      if (el !== null) scrollToProgress(el, next.start, reduced ? 'instant' : 'smooth')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [act.id])
+  }, [act.id, runway])
 
   // Scroll-driven page tint (Prompt D section 8.1): the act colour at low
   // opacity over the page. Written straight to the DOM, never React state.
@@ -124,25 +141,36 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={act.id === 'teardown' ? `teardown-${layerIndex}` : act.id}
+            key={act.id}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
             className="max-w-xl"
           >
-            {layerCopy !== undefined ? (
-              <>
-                <div
-                  aria-hidden="true"
-                  className="mb-3 h-px w-10"
-                  style={{ backgroundColor: layerAccent ?? '#7fb4ff' }}
-                />
-                <Kicker>{layerCopy.kicker}</Kicker>
-                <Headline>{layerCopy.headline}</Headline>
-                <p className="mt-3 text-base text-(--color-dim)">{layerCopy.body}</p>
-                <p className="spec-tech mt-3 text-(--color-dim)">{layerCopy.figure}</p>
-              </>
+            {act.id === 'teardown' ? (
+              <div className="grid">
+                {TEARDOWN_COPY.map((copy, i) => (
+                  <div
+                    key={copy.key}
+                    ref={(el) => {
+                      cardRefs.current[i] = el
+                    }}
+                    data-testid={`teardown-card-${copy.key}`}
+                    className="col-start-1 row-start-1"
+                  >
+                    <div
+                      aria-hidden="true"
+                      className="mb-3 h-px w-10"
+                      style={{ backgroundColor: TEARDOWN_LAYERS[i]?.accent ?? '#7fb4ff' }}
+                    />
+                    <Kicker>{copy.kicker}</Kicker>
+                    <Headline>{copy.headline}</Headline>
+                    <p className="mt-3 text-base text-(--color-dim)">{copy.body}</p>
+                    <p className="spec-tech mt-3 text-(--color-dim)">{copy.figure}</p>
+                  </div>
+                ))}
+              </div>
             ) : (
               <>
                 <Kicker>{chapter.kicker}</Kicker>
@@ -180,9 +208,9 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
             className="kicker opacity-40 data-[active=true]:opacity-100"
             onClick={(e) => {
               e.preventDefault()
-              const max = document.documentElement.scrollHeight - window.innerHeight
               const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-              window.scrollTo({ top: a.start * max, behavior: reduced ? 'instant' : 'smooth' })
+              const el = runway.current
+              if (el !== null) scrollToProgress(el, a.start, reduced ? 'instant' : 'smooth')
             }}
           >
             {String(i + 1).padStart(2, '0')}
