@@ -6,7 +6,6 @@ import {
   BODY_N,
   CHAMFER,
   DIM,
-  FRAME_BODY_DEPTH,
   RING_BASE_Z,
   RING_DEPTH,
 } from './phoneDimensions.ts'
@@ -15,7 +14,7 @@ let bodyNOverride: number | null = null
 
 /**
  * Body superellipse exponent, tunable by eye via `?bodyN=` (Prompt A
- * section 3: tune, then freeze). Frozen at BODY_N = 5.0; the query param
+ * section 3: tune, then freeze). Frozen at BODY_N = 6.0; the query param
  * exists only for the tuning session, clamped to the sane range.
  */
 export function bodyExponent(): number {
@@ -295,7 +294,10 @@ export function superellipseSlabGeometry(
 
 /** Chamfered solid frame body: superellipse spine with beveled rims. */
 export function createFrameBodyGeometry(backFaceZ: number, coarse = false): THREE.BufferGeometry {
-  const bevelSize = 0.0007
+  // Tile exactly: rear face at backFaceZ, top face flush with the ring base
+  // so no groove reads edge-on. Depth derives from the planes, not a const.
+  const bevelSize = CHAMFER.body
+  const bevelThickness = 0.0006
   const shape = superellipseShape(
     DIM.w / 2 - bevelSize,
     DIM.h / 2 - bevelSize,
@@ -303,15 +305,15 @@ export function createFrameBodyGeometry(backFaceZ: number, coarse = false): THRE
     coarse ? 32 : 64,
   )
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: FRAME_BODY_DEPTH - bevelSize * 2,
+    depth: Math.max(0.0001, RING_BASE_Z - backFaceZ - bevelThickness * 2),
     bevelEnabled: true,
     bevelSize,
-    bevelThickness: 0.0005,
+    bevelThickness,
     bevelSegments: 4,
     curveSegments: coarse ? 10 : 20,
     steps: 1,
   })
-  geometry.translate(0, 0, backFaceZ + 0.0005)
+  geometry.translate(0, 0, backFaceZ + bevelThickness)
   return geometry
 }
 

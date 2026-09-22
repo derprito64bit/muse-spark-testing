@@ -1,8 +1,9 @@
-import { AnimatePresence, motion, type MotionValue } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { AnimatePresence, motion, useMotionValueEvent, type MotionValue } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
 import { Glass } from '../../components/Glass/Glass.tsx'
 import { CHAPTERS } from '../chapters.ts'
 import { inspectHit } from '../inspect.ts'
+import { stageColors } from '../stage/stageColors.ts'
 import { ACTS } from '../timeline.ts'
 import { useChapter } from '../useChapter.ts'
 import { BigNumeral } from './BigNumeral.tsx'
@@ -65,9 +66,20 @@ export function FilmOverlay({ progress }: FilmOverlayProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [act.id])
 
+  // Scroll-driven page tint (Prompt D section 8.1): the act colour at low
+  // opacity over the page. Written straight to the DOM, never React state.
+  // Hooks stay above the empty-chapters bail so the order never changes.
+  const tintRef = useRef<HTMLDivElement>(null)
+  useMotionValueEvent(progress, 'change', (p) => {
+    const el = tintRef.current
+    if (el === null) return
+    const { base } = stageColors(typeof p === 'number' ? p : 0)
+    el.style.backgroundColor = `#${base.getHexString()}2e`
+  })
   if (chapter === undefined) return null
   return (
     <div className="pointer-events-none absolute inset-0" aria-live="polite">
+      <div ref={tintRef} aria-hidden="true" className="absolute inset-0" />
       <div
         data-align={act.align}
         data-testid="film-chapter"

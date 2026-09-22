@@ -14,6 +14,7 @@ import { FilmDirector, type FilmRefs } from './FilmDirector.tsx'
 import { Internals, type InternalsControl } from './internals/Internals.tsx'
 import { createInternalsMaterials } from './internals/internalsMaterials.ts'
 import { LiveScreen, useScreenRefs } from './LiveScreen.tsx'
+import { Stage } from './stage/Stage.tsx'
 import { calloutBridge } from './overlay/callouts.ts'
 import type { MotionValue } from 'motion/react'
 
@@ -163,6 +164,7 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
       />
       <ambientLight intensity={0.35} color="#dfe8ff" />
       <StudioEnvironment />
+      <Stage progress={progress} />
       <group ref={hero}>
         <PhoneConfigProvider>
           <PhoneModel

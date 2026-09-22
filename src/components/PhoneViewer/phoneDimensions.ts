@@ -18,7 +18,7 @@ export const FRONT_GLASS = { depth: 0.0015, z: 0.003 } as const
 export const DISPLAY_PANEL = { depth: 0.0011, z: 0.00215 } as const
 
 /** Front frame split: solid rear body plus a perimeter bezel ring. */
-export const FRAME_BODY_DEPTH = 0.0042
+export const FRAME_BODY_DEPTH = 0.0042 // body zone; slab depth derives from planes
 // The ring tiles against the body with no gap: body top sits at -0.0001
 // (back face + depth - bevels), so the ring base starts exactly there. The
 // old 0.0004 base left a 0.5mm perimeter groove that read edge-on as the
@@ -155,23 +155,24 @@ export const EARPIECE = { w: 0.012, h: 0.0006, y: 0.0772 } as const
 
 /**
  * Superellipse exponents. The exponent controls corner fullness: 2 is an
- * ellipse, 4 reads as a phone, 5.5 as a brick. Body 5.5 for tight
- * rectangular corners that carry the glass out to the rails. The camera
- * module is circular (Prompt A2), not a squircle.
+ * ellipse, 4 reads as a phone, 5.5 as a brick. Body 6.0: rectangular with
+ * smoothed corners, the glass carried out to the rails. The camera module
+ * is circular (Prompt A2), not a squircle.
  */
-export const BODY_N = 5.5
+export const BODY_N = 6.0
 
 /**
  * Chamfer sizes in meters. Every visible edge gets one or it renders as a
  * hard colour boundary with no specular line.
  */
 export const CHAMFER = {
-  glassMeet: 0.00025,
+  glassMeet: 0.00035,
   moduleBase: 0.0005, // 0.50mm, module into the rear panel, a fillet not a flat
   collarStep: 0.0003, // 0.30mm, between collar tiers
   collar: 0.00015,
   button: 0.0001,
   portMouth: 0.0002,
+  body: 0.0009, // 0.90mm, frame body edge: rectangular, smoothed corners
 } as const
 
 /** Vertical silhouette height in meters for a scale and x-rotation. */
