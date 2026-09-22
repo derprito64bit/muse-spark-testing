@@ -45,6 +45,7 @@ export const CAMERA_KEYS: FilmKey[] = [
     camera: { pos: [-0.0233, 0.21, 0.1496], target: [0.0148, 0.1299, -0.0297] },
     lens: { fov: 30 },
     look: { exposure: 0.8, glass: 0.3 },
+    ease: 'smooth',
   }),
   key({
     at: 0.705,
@@ -52,6 +53,7 @@ export const CAMERA_KEYS: FilmKey[] = [
     camera: { pos: [-0.0233, 0.21, 0.1496], target: [0.0148, 0.1299, -0.0297] },
     lens: { fov: 30 },
     look: { exposure: 0.8, glass: 0.3 },
+    ease: 'smooth',
   }),
   // Hold 0.685 to 0.705: camera locked so the coating shift and baffle
   // rings have a moment to be looked at (Prompt B section 5.2).

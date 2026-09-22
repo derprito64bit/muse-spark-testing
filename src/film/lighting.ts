@@ -58,8 +58,8 @@ export const STAGE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.8,
     exposure: 1.05,
     envTint: '#eef2ff',
-    stage: '#2f3648',
-    stageTop: '#414c60',
+    stage: '#3a4252',
+    stageTop: '#4a5468',
   },
   camera: {
     key: 2.4,

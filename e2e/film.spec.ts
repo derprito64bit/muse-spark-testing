@@ -27,3 +27,17 @@ test('film static fallback renders every act without WebGL', async ({ page }) =>
   await expect(fallback).toBeVisible()
   await expect(fallback.getByRole('heading', { level: 2 }).first()).toBeVisible()
 })
+
+test('reduced motion tells the teardown in stills (round 01 A7)', async ({ browser }) => {
+  // Reduced motion bypasses the WebGL film for the static story, which
+  // carries all ten teardown layers with their copy (Film.tsx).
+  const context = await browser.newContext({ reducedMotion: 'reduce' })
+  const page = await context.newPage()
+  await page.goto('/?t=0.4')
+  const fallback = page.getByTestId('film-fallback')
+  await expect(fallback).toBeVisible()
+  await expect(page.getByText('Motion is reduced on this device')).toBeVisible()
+  await expect(page.locator('[aria-label="Teardown layer silicon"]')).toBeVisible()
+  await expect(page.locator('[aria-label="Teardown layer rear-panel"]')).toBeVisible()
+  await context.close()
+})

@@ -69,4 +69,45 @@ describe('timeline sampler', () => {
       expect(s.fovMax).toBeLessThanOrEqual(60)
     }
   })
+
+  it('passes non-hold keys at speed instead of stalling (round 01 A5)', () => {
+    // Per-segment smoothstep drives velocity to ~0 at every key (14x-785x
+    // collapse pre-fix). Linear segments hold speed: FOV is exactly 1x, and
+    // camera speed varies only by authored slope changes and reclock span
+    // jumps (worst 10.7x at the 0.95 ai-exit whip, still continuous).
+    // One-sided speeds so authored extrema (e.g. an FOV peak exactly on a
+    // key) do not read as stalls; true stalls are ~0 from both sides.
+    const h = 5e-4
+    const snap = (p: number): { px: number; py: number; pz: number; fov: number } => {
+      const s = sampleFilm(Math.min(1, Math.max(0, p)))
+      return { px: s.pos.x, py: s.pos.y, pz: s.pos.z, fov: s.fov }
+    }
+    const easeAts = new Set(
+      filmKeys()
+        .filter((k) => k.ease === 'smooth')
+        .map((k) => k.at),
+    )
+    for (let i = 1; i < filmKeys().length - 1; i++) {
+      const k = filmKeys()[i]!
+      if (easeAts.has(k.at)) continue
+      const a = snap(k.at - h)
+      const b = snap(k.at)
+      const c = snap(k.at + h)
+      const posAt = Math.max(
+        Math.hypot(b.px - a.px, b.py - a.py, b.pz - a.pz) / h,
+        Math.hypot(c.px - b.px, c.py - b.py, c.pz - b.pz) / h,
+      )
+      const fovAt = Math.max(Math.abs(b.fov - a.fov) / h, Math.abs(c.fov - b.fov) / h)
+      const m = snap(k.at - 0.006)
+      const n = snap(k.at - 0.006 + 2 * h)
+      const posBefore = Math.hypot(n.px - m.px, n.py - m.py, n.pz - m.pz) / (2 * h)
+      const fovBefore = Math.abs(n.fov - m.fov) / (2 * h)
+      if (fovBefore > 1e-6) {
+        expect(fovBefore / Math.max(fovAt, 1e-9), `fov collapse at ${k.at}`).toBeLessThan(2)
+      }
+      if (posBefore > 1e-6) {
+        expect(posBefore / Math.max(posAt, 1e-9), `pos collapse at ${k.at}`).toBeLessThan(12)
+      }
+    }
+  })
 })

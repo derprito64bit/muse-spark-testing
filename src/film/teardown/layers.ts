@@ -21,6 +21,14 @@ export interface TeardownLayer {
   accent: string
   /** Hero-side scale bump when featured. */
   featureScale: number
+  /**
+   * Half-height of the featured subject in meters (round 01 A4). Drives the
+   * narrow-viewport macro floor so the featured layer never crops: full
+   * phone for shell layers, measured part bounds for internals (see the
+   * layout manifest: cell, board union, SoC package, graphite, NFC ring,
+   * camera module outerR).
+   */
+  featureHalfM: number
   /** Heavy layers move slowly with almost no tumble; light layers faster. */
   weight: 'light' | 'medium' | 'heavy'
 }
@@ -45,6 +53,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'cover-glass',
     accent: '#9fd4ff',
     featureScale: 1.12,
+    featureHalfM: 0.08, // full phone silhouette (159.6mm)
     weight: 'light',
   },
   {
@@ -55,6 +64,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'display',
     accent: '#cfe9ff',
     featureScale: 1.1,
+    featureHalfM: 0.08,
     weight: 'light',
   },
   {
@@ -65,6 +75,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'midframe',
     accent: '#b8c2d0',
     featureScale: 1.06,
+    featureHalfM: 0.08,
     weight: 'heavy',
   },
   {
@@ -75,6 +86,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'battery',
     accent: '#c4d99a',
     featureScale: 1.08,
+    featureHalfM: 0.039, // cell h 0.078
     weight: 'heavy',
   },
   {
@@ -102,6 +114,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'logic-board',
     accent: '#7fd4b0',
     featureScale: 1.1,
+    featureHalfM: 0.069, // main + sub board union, y -0.0725 to 0.065
     weight: 'medium',
   },
   {
@@ -112,6 +125,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'silicon',
     accent: '#ffc978',
     featureScale: 1.14,
+    featureHalfM: 0.0125, // SoC package + BGA array
     weight: 'medium',
   },
   {
@@ -122,6 +136,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'thermal',
     accent: '#b9aecb',
     featureScale: 1.08,
+    featureHalfM: 0.045, // graphite sheet h 0.09, tallest in the layer
     weight: 'light',
   },
   {
@@ -132,6 +147,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'power-coil',
     accent: '#e09a5f',
     featureScale: 1.1,
+    featureHalfM: 0.026, // NFC ring rOut, outboard of the coil
     weight: 'medium',
   },
   {
@@ -150,6 +166,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'camera',
     accent: '#8fd8e0',
     featureScale: 1.12,
+    featureHalfM: 0.024, // module outerR 0.0235
     weight: 'medium',
   },
   {
@@ -160,6 +177,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'rear-panel',
     accent: '#c8ccd4',
     featureScale: 1.06,
+    featureHalfM: 0.08, // full phone silhouette
     weight: 'medium',
   },
 ]
@@ -214,9 +232,10 @@ export interface FeatureFrame {
  * Four-phase feature envelope from local progress: detach 0-0.22, flip
  * 0.18-0.52, hold 0.52-0.80, restack 0.80-1.0 (roughly 1.6x the outbound
  * rate). Writes into `out`: zero allocation per frame. Light layers
- * overshoot on arrival; heavy layers never do. Under reduced motion the
- * envelopes snap binary instead of travelling: the content stays reachable
- * with no drift, no overshoot, no flip animation.
+ * overshoot on arrival; heavy layers never do. Under reduced motion there
+ * is no tumble and no overshoot: detach and scale cross-fade linearly
+ * across the same phase landmarks instead of stepping, so scrubbing never
+ * teleports a layer (round 01 A7).
  */
 export function featureFrame(
   lp: number,
@@ -225,9 +244,12 @@ export function featureFrame(
   snap = false,
 ): FeatureFrame {
   if (snap) {
-    out.detach = lp > 0.02 && lp < 0.98 ? 1 : 0
-    out.turn = lp > 0.18 && lp < 0.82 ? 1 : 0
-    out.scale = lp > 0.52 && lp < 0.8 ? 1 : 0
+    const clamp01 = (t: number): number => Math.min(1, Math.max(0, t))
+    const up = clamp01((lp - 0.02) / 0.2)
+    const release = clamp01((0.98 - lp) / 0.18)
+    out.detach = Math.min(up, release)
+    out.turn = 0
+    out.scale = Math.min(clamp01((lp - 0.52) / 0.08), clamp01((0.8 - lp) / 0.08))
     return out
   }
   const back = smooth01((lp - 0.8) / 0.2)

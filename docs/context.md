@@ -14,14 +14,15 @@ push deploy.
 
 meta (09:52) → setup (09:54:37) → meta_1 (09:54:44) → device-model
 (14:06) → **prompt-A (15:53:20, DESIGN bible)** → **prompt-B (15:53:22,
-animation, newest overall)**. Design = **plateau camera** (offset 2-tier
-squircle, L lenses), NOT dial (D7 retired). Repo already implements
-Prompt A fully (thread ring, knurl, baffles, port — see CameraAssembly).
-Blender build is a SIMPLIFIED subset: has body n=5, plateau tiers,
-3 lenses, flash/rangefinder, obsidian-ish. Still missing vs A: thread
-ring (96 teeth), collar knurling, barrel baffles, per-lens AR hues,
-USB-C cavity + asymmetric rail, antenna bands, buttons/SIM/gaps,
-other 4 finishes.
+animation)** → **prompt-A2 (2026-09-21, supersedes A §5)** →
+**prompt-C (internals)** → **prompt-D (2026-09-21, teardown, newest
+overall)** → **round-01 review (2026-09-22)**. Design = **circular
+camera module** (centred, 47mm, triangle lenses + periscope, NOVEK
+partner, iris medallion) — the offset plateau (D7) was retired by A2.
+Repo implements A2 + C + D (see `docs/device-design.md`); when docs and
+code disagree, `phoneDimensions.ts` + `timeline.ts` win.
+Blender build is a SIMPLIFIED subset of the circular design (see Blender
+section below for the as-built list).
 
 ## State (all committed + pushed)
 

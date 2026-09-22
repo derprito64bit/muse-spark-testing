@@ -7,7 +7,7 @@ import { SHOTS, capAngularStep } from './shots.ts'
 import { STAGE_LIGHTING } from './lighting.ts'
 import { clearInspectPointer, setInspectPointer, tickInspect } from './inspect.ts'
 import type { ScreenMode } from './LiveScreen.tsx'
-import { computeFilmStates, ramplike } from './states.ts'
+import { computeFilmStates, layerWindow } from './states.ts'
 import { actAt } from './timeline.ts'
 import {
   FEATURE_OFFSET,
@@ -320,11 +320,12 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
       const floor = macroFloorFov(p, distance, aspect)
       if (floor > targetFov) targetFov = floor
     }
-    // Vertigo once, at the chip entry: widen the lens while the camera
+    // Vertigo once, on the silicon feature: widen the lens while the camera
     // pushes in so the die holds size and the background warps. Used once;
-    // twice would be a gimmick.
+    // twice would be a gimmick. Derived from the layer cursor, not raw
+    // progress, so the beat tracks layer 5 (round 01 A3).
     if (!reduced) {
-      const w = ramplike(p, 0.33, 0.335, 0.355, 0.365)
+      const w = layerWindow(st.layerCursor, 5, 0.5, 0.5)
       if (w > 0) {
         targetFov += (dollyZoomFov(targetFov, w * 0.12, distance) - targetFov) * w
       }
@@ -352,10 +353,11 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
       mat.opacity = ghost ? Math.max(0.02, base - st.shellGhost * 0.9) : base
     }
     if (ghost) {
-      const frameAlpha = Math.max(
-        0.02,
-        1 - st.shellGhost * 0.9 - st.chipFocus * 0.8 - st.cameraFocus * 0.5,
-      )
+      // While the teardown stack is separated, RECEDE_MATS owns the midframe
+      // (round 01 A3): the retired chipFocus term pinned the frame shut
+      // through the silicon beat and fought the teardown driver over it.
+      const chipDim = st.stackSeparate > 0.001 ? 0 : st.chipFocus * 0.8
+      const frameAlpha = Math.max(0.02, 1 - st.shellGhost * 0.9 - chipDim - st.cameraFocus * 0.5)
       for (const name of FRAME_MATS) materials[name].opacity = frameAlpha
       if (refs.frame.current !== null) {
         refs.frame.current.visible = !(frameAlpha <= 0.05 && st.chipFocus > 0.4)

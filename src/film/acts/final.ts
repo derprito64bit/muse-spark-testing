@@ -15,6 +15,7 @@ export const FINAL_KEYS: FilmKey[] = [
     camera: { pos: [0, 0.02, 0.6], target: [0, 0, 0] },
     lens: { fov: 22, fit: 0.6 },
     look: { exposure: 1.1 },
+    ease: 'smooth',
   }),
   key({
     at: 1,

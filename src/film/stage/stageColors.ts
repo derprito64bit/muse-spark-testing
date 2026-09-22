@@ -54,9 +54,14 @@ export function stageColors(p: number): { base: THREE.Color; top: THREE.Color } 
   if (index < 0) index = p >= 1 ? ACTS.length - 1 : 0
   const act = ACTS[index]
   if (act?.id === 'teardown') {
+    // Endpoints come from STAGE_LIGHTING so the generic path meets the ramp
+    // seamlessly at both boundaries (round 01 A1): approach at 0.25 in,
+    // teardown at 0.52 out, which the camera act then blends away from.
     const t = Math.min(1, Math.max(0, (p - 0.25) / 0.27))
-    scratchColor.set('#252c3a').lerp(scratchTarget.set('#3a4252'), t)
-    scratchTop.set('#3a4252').lerp(scratchTarget.set('#4a5468'), t)
+    const start = STAGE_LIGHTING.approach
+    const end = STAGE_LIGHTING.teardown
+    scratchColor.set(start.stage).lerp(scratchTarget.set(end.stage), t)
+    scratchTop.set(start.stageTop).lerp(scratchTarget.set(end.stageTop), t)
     return { base: scratchColor, top: scratchTop }
   }
   const prev = ACTS[Math.max(0, index - 1)]

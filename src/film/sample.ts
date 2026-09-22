@@ -25,22 +25,71 @@ export interface FilmSample {
   glass: number
 }
 
+interface Segment {
+  a: FilmKey
+  b: FilmKey
+  t: number
+  ia: number
+  ib: number
+}
+
+/** Last segment index hint: p is near-monotonic, so resume the scan there. */
+const SEG_HINT = { index: 1 }
+
+/** Scratch segment for findSegment: zero allocation per frame (round 01 A6). */
+const SEG_SCRATCH: Segment = {
+  a: undefined as unknown as FilmKey,
+  b: undefined as unknown as FilmKey,
+  t: 0,
+  ia: 0,
+  ib: 0,
+}
+
 /** Locates the authored segment at progress p with the eased local parameter. */
-function findSegment(p: number): { a: FilmKey; b: FilmKey; t: number; ia: number; ib: number } {
+function findSegment(p: number, out: Segment): Segment {
   const first = KEYS[0]
   if (first === undefined) throw new Error('KEYS must not be empty')
-  if (p <= first.at) return { a: first, b: first, t: 0, ia: 0, ib: 0 }
-  for (let i = 1; i < KEYS.length; i++) {
+  if (p <= first.at) {
+    SEG_HINT.index = 1
+    out.a = first
+    out.b = first
+    out.t = 0
+    out.ia = 0
+    out.ib = 0
+    return out
+  }
+  // Backward scrub: the hinted segment starts after p, rescan from the top.
+  if (SEG_HINT.index > 1) {
+    const hinted = KEYS[SEG_HINT.index - 1]
+    if (hinted !== undefined && p < hinted.at) SEG_HINT.index = 1
+  }
+  for (let i = SEG_HINT.index; i < KEYS.length; i++) {
     const b = KEYS[i]
     const a = KEYS[i - 1]
     if (b === undefined || a === undefined) continue
     if (p <= b.at) {
-      return { a, b, t: smoothstep((p - a.at) / (b.at - a.at)), ia: i - 1, ib: i }
+      SEG_HINT.index = i
+      const u = (p - a.at) / (b.at - a.at)
+      // Ease only where authored: the segment's start key carries it. Every
+      // other segment interpolates linearly so keys are passed at speed
+      // instead of stalling to a velocity zero (round 01 A5).
+      out.a = a
+      out.b = b
+      out.t = a.ease === 'smooth' ? smoothstep(u) : u
+      out.ia = i - 1
+      out.ib = i
+      return out
     }
   }
   const last = KEYS[KEYS.length - 1]
   if (last === undefined) throw new Error('KEYS must not be empty')
-  return { a: last, b: last, t: 0, ia: KEYS.length - 1, ib: KEYS.length - 1 }
+  SEG_HINT.index = KEYS.length
+  out.a = last
+  out.b = last
+  out.t = 0
+  out.ia = KEYS.length - 1
+  out.ib = KEYS.length - 1
+  return out
 }
 
 /**
@@ -49,9 +98,8 @@ function findSegment(p: number): { a: FilmKey; b: FilmKey; t: number; ia: number
  * against the pose and FOV timelines. Re-clocking onto the author segment
  * clock forces each key to land exactly at its authored progress.
  */
-function reclockedCurveParam(p: number): number {
-  const { t, ia, ib } = findSegment(p)
-  return (ia + (ib - ia) * t) / (KEYS.length - 1)
+function reclockedCurveParam(seg: Segment): number {
+  return (seg.ia + (seg.ib - seg.ia) * seg.t) / (KEYS.length - 1)
 }
 
 const POS_PTS = KEYS.map((k) => new THREE.Vector3(...k.camera.pos))
@@ -82,9 +130,12 @@ const OUT: FilmSample = {
  * and look ease between keys.
  */
 export function sampleFilm(p: number): FilmSample {
-  const { a, b, t } = findSegment(p)
-  POS_CURVE.getPoint(reclockedCurveParam(p), OUT.pos)
-  TGT_CURVE.getPoint(reclockedCurveParam(p), OUT.target)
+  // One segment lookup per frame (round 01 A6): the curve param derives
+  // from the same scratch the pose/FOV blend reads below.
+  const { a, b, t } = findSegment(p, SEG_SCRATCH)
+  const u = reclockedCurveParam(SEG_SCRATCH)
+  POS_CURVE.getPoint(u, OUT.pos)
+  TGT_CURVE.getPoint(u, OUT.target)
 
   OUT.rx = a.pose.rx + (b.pose.rx - a.pose.rx) * t
   OUT.ry = a.pose.ry + (b.pose.ry - a.pose.ry) * t

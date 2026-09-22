@@ -25,6 +25,7 @@ export const TEARDOWN_KEYS: FilmKey[] = [
     camera: { pos: [0.02, 0.44, 0.5], target: [0, -0.03, -0.02] },
     lens: { fov: 25, fit: 0.5 },
     look: { exposure: 1.05, glass: 0.4 },
+    ease: 'smooth',
   }),
   key({
     at: 0.295,
@@ -32,6 +33,7 @@ export const TEARDOWN_KEYS: FilmKey[] = [
     camera: { pos: [0.02, 0.435, 0.495], target: [0, -0.03, -0.02] },
     lens: { fov: 25, fit: 0.5 },
     look: { exposure: 1.05, glass: 0.4 },
+    ease: 'smooth',
   }),
   key({
     at: 0.34,

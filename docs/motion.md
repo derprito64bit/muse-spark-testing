@@ -5,14 +5,17 @@
 Every act names its move: establishing (slow, wide), push-in (accelerates,
 eases out hard), arc (constant angular velocity), macro (locked off,
 damp 3.5/s), reveal (fast in, long settle). The director reads the damp
-rate per act. Moves ease out over roughly 20 percent; nothing is linear.
+rate per act. Timeline segments run linear (keys pass at speed; the
+director's damping supplies the settle); `ease: 'smooth'` only on authored
+holds.
 
 ## Zoom modules (`src/zoom/zoom.ts`)
 
 - Camera dolly: the film transport itself.
 - Dolly-zoom (Vertigo): `dollyZoomFov` widens the lens as the camera pushes
-  so the subject holds size and the background warps. Wired once, at the
-  chip entry (0.33 to 0.365). Twice would be a gimmick.
+  so the subject holds size and the background warps. Wired once, on the
+  silicon feature (layer cursor 5, p in [0.395, 0.415]). Twice would be
+  a gimmick.
 - Infinite-zoom match cut: `matchCutOpacity` crossfades layers A and B
   across a fixed scale ratio; no frame shows both readable. The phone to
   die handoff rides the x-ray ghost plus die emissive window.

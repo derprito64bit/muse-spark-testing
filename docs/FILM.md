@@ -11,7 +11,9 @@ scroll independently.
 - `src/film/acts/<act>.ts` — one file per act, each exporting its keys.
 - `src/film/timeline.ts` — `ACTS` (13 ranges + overlay alignment) and `KEYS`.
 - `src/film/sample.ts` — `sampleFilm(p)`: Catmull-Rom camera path with
-  re-clocked knots plus eased pose, FOV, and look. Zero allocation.
+  re-clocked knots plus pose, FOV, and look. Segments interpolate
+  linearly by default so keys pass at speed; `ease: 'smooth'` only on
+  authored holds (0.272, 0.295, 0.685, 0.705, 0.98). Zero allocation.
 - `src/film/framing.ts` — `fitFov`, `formatFit`, `centerBias`, `macroFloorFov`.
 - `src/film/validate.ts` — `validateTimeline(keys)` run in dev and in tests.
 - `src/film/Scrubber.tsx` — dev overlay (`.` key, `?t=` deep link).

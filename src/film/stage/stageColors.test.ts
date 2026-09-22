@@ -48,6 +48,40 @@ describe('stageColors', () => {
     }
   })
 
+  it('has no step at the teardown boundaries (round 01 A1)', () => {
+    // A hard step is two orders of magnitude above any eased slope, so the
+    // reference is the worst per-step delta anywhere else on the film.
+    const channels = (p: number): number[] => {
+      const s = stageColors(p)
+      return [s.base.r, s.base.g, s.base.b, s.top.r, s.top.g, s.top.b]
+    }
+    const inBoundary = (p: number): boolean => (p >= 0.24 && p <= 0.26) || (p >= 0.51 && p <= 0.53)
+    const maxStep = (from: number, to: number): number => {
+      let prev = channels(from)
+      let worst = 0
+      for (let p = from + 1e-4; p <= to + 1e-9; p += 1e-4) {
+        const cur = channels(p)
+        for (let k = 0; k < 6; k++) worst = Math.max(worst, Math.abs(cur[k]! - prev[k]!))
+        prev = cur
+      }
+      return worst
+    }
+    let reference = 0
+    let prev = channels(0)
+    for (let i = 1; i <= 10000; i++) {
+      const p = i / 10000
+      if (inBoundary(p) || inBoundary(p - 1e-4)) {
+        prev = channels(p)
+        continue
+      }
+      const cur = channels(p)
+      for (let k = 0; k < 6; k++) reference = Math.max(reference, Math.abs(cur[k]! - prev[k]!))
+      prev = cur
+    }
+    expect(maxStep(0.24, 0.26)).toBeLessThanOrEqual(reference)
+    expect(maxStep(0.51, 0.53)).toBeLessThanOrEqual(reference)
+  })
+
   it('clears every layer accent 3:1 against its own stage range', () => {
     // Accents light the rim and draw a rule; they never carry text (text
     // wears ink per the dataviz rule), so the technical 3:1 floor applies,

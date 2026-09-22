@@ -51,8 +51,6 @@ export interface FilmStates {
   layerCursor: number
   /** 0..1 how strongly unfeatured layers recede (teardown). */
   contextRecede: number
-  /** 0..1 stage lightness ramp across the teardown sequence. */
-  stageRamp: number
 }
 
 /**
@@ -62,6 +60,18 @@ export interface FilmStates {
 export function ramplike(p: number, in1: number, in2: number, out1: number, out2: number): number {
   const up = smoothstep((p - in1) / Math.max(1e-5, in2 - in1))
   const down = smoothstep((p - out1) / Math.max(1e-5, out2 - out1))
+  return Math.min(up, 1 - down)
+}
+
+/**
+ * Beat window for one teardown layer (round 01 A3). Full 1 across the
+ * layer's own cursor window [index, index + 1], ramping up over `lead`
+ * layers before and down over `tail` after. Derived from the continuous
+ * layerCursor so beats track the feature run instead of raw progress.
+ */
+export function layerWindow(cursor: number, index: number, lead: number, tail: number): number {
+  const up = smoothstep((cursor - (index - lead)) / Math.max(1e-5, lead))
+  const down = smoothstep((cursor - (index + 1)) / Math.max(1e-5, tail))
   return Math.min(up, 1 - down)
 }
 
@@ -91,7 +101,6 @@ const STATES: FilmStates = {
   stackSeparate: 0,
   layerCursor: 0,
   contextRecede: 0,
-  stageRamp: 0,
 }
 
 /**
@@ -100,7 +109,15 @@ const STATES: FilmStates = {
  */
 export function computeFilmStates(p: number): FilmStates {
   STATES.cameraFocus = ramplike(p, 0.635, 0.665, 0.705, 0.73)
-  STATES.chipLift = ramplike(p, 0.34, 0.37, 0.455, 0.485)
+  // Teardown cursor first: the silicon beats below derive from it so they
+  // track layer 5 (p in [0.395, 0.415]) instead of the retired chip act.
+  // Snap float dust to integers: (0.315 - 0.295) / 0.02 is 1.0000000000000009
+  // in binary, which would trip the [0, 10] range test by an ulp.
+  const rawCursor = (p - 0.295) / 0.02
+  const snapped =
+    Math.abs(rawCursor - Math.round(rawCursor)) < 1e-9 ? Math.round(rawCursor) : rawCursor
+  const cursor = Math.min(10, Math.max(0, snapped))
+  STATES.chipLift = layerWindow(cursor, 5, 0.5, 0.5)
   STATES.battLift = ramplike(p, 0.893, 0.91, 0.92, 0.928)
   STATES.optical = ramplike(p, 0.645, 0.675, 0.715, 0.74)
   STATES.explodeXray = ramplike(p, 0.27, 0.32, 0.48, 0.5)
@@ -114,7 +131,7 @@ export function computeFilmStates(p: number): FilmStates {
     1,
     ramplike(p, 0.26, 0.31, 0.485, 0.505) + ramplike(p, 0.88, 0.9, 0.905, 0.93),
   )
-  STATES.chipFocus = ramplike(p, 0.36, 0.445, 0.48, 0.5)
+  STATES.chipFocus = layerWindow(cursor, 5, 0.5, 0.5)
   STATES.subjectDim = Math.min(
     1,
     ramplike(p, 0.39, 0.42, 0.46, 0.485) + ramplike(p, 0.893, 0.905, 0.92, 0.928),
@@ -146,13 +163,9 @@ export function computeFilmStates(p: number): FilmStates {
   // progress. Everything per-layer derives from it and reverses exactly.
   STATES.layDown = ramplike(p, 0.25, 0.265, 0.5, 0.52)
   STATES.stackSeparate = ramplike(p, 0.272, 0.295, 0.485, 0.5)
-  // Snap float dust to integers: (0.315 - 0.295) / 0.02 is 1.0000000000000009
-  // in binary, which would trip the [0, 10] range test by an ulp.
-  const rawCursor = (p - 0.295) / 0.02
-  const snapped =
-    Math.abs(rawCursor - Math.round(rawCursor)) < 1e-9 ? Math.round(rawCursor) : rawCursor
-  STATES.layerCursor = Math.min(10, Math.max(0, snapped))
-  STATES.contextRecede = ramplike(p, 0.295, 0.31, 0.48, 0.495)
-  STATES.stageRamp = Math.min(1, Math.max(0, (p - 0.25) / 0.27))
+  STATES.layerCursor = cursor
+  // The descent releases into the restack (round 01 A9): layer 9 runs
+  // p in [0.475, 0.495], so the recede must survive its whole beat.
+  STATES.contextRecede = ramplike(p, 0.295, 0.31, 0.495, 0.505)
   return STATES
 }

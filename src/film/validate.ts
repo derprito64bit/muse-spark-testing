@@ -91,7 +91,10 @@ export function validateTimeline(keys: FilmKey[]): TimelineIssue[] {
           detail: `key ${i} at ${k.at} follows ${prev.at}`,
         })
       }
-      if (prev !== undefined && k.at - prev.at > MAX_GAP) {
+      // MAX_GAP is inclusive: the teardown 0.34 -> 0.40 pair sits exactly
+      // on it by design. The epsilon keeps binary float dust (e.g. an
+      // authored 0.06 arriving as 0.0600000001) from tripping the rule.
+      if (prev !== undefined && k.at - prev.at > MAX_GAP + 1e-9) {
         issues.push({ rule: 'max-gap', detail: `gap ${prev.at} to ${k.at} exceeds ${MAX_GAP}` })
       }
     }

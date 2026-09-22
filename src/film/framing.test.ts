@@ -41,6 +41,17 @@ describe('responsive framing', () => {
     expect(macroFloorFov(0.1, 0.9, 0.5)).toBe(0)
   })
 
+  it('floors the teardown run per featured layer, not one die size (round 01 A4)', () => {
+    // p 0.392 (logic-board, 0.069) > p 0.44 (power-coil, 0.026) >
+    // p 0.405 (silicon, 0.0125): same camera, wider subject, wider floor.
+    const board = macroFloorFov(0.392, 0.5, 0.5)
+    const coil = macroFloorFov(0.44, 0.5, 0.5)
+    const silicon = macroFloorFov(0.405, 0.5, 0.5)
+    expect(board).toBeGreaterThan(coil)
+    expect(coil).toBeGreaterThan(silicon)
+    expect(silicon).toBeGreaterThan(0)
+  })
+
   it('clamps off-center bias on narrow screens', () => {
     expect(centerBias(0.5, 'x')).toBeLessThan(centerBias(2.5, 'x'))
     expect(centerBias(1.78, 'y')).toBeCloseTo(1, 5)

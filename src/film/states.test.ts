@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeFilmStates, ramplike } from './states.ts'
+import { computeFilmStates, layerWindow, ramplike } from './states.ts'
 
 describe('film states', () => {
   it('opens no x-ray window at rest', () => {
@@ -28,9 +28,24 @@ describe('film states', () => {
     expect(end.explodeXray).toBe(0)
   })
 
-  it('focuses the die through the chip act, then releases', () => {
-    expect(computeFilmStates(0.445).chipFocus).toBeCloseTo(1, 4)
+  it('focuses the die on the silicon feature, then releases', () => {
+    // Layer 5 runs p in [0.395, 0.415]; the retired chip-act window peaked
+    // mid-midframe instead (round 01 A3).
+    expect(computeFilmStates(0.405).chipFocus).toBeCloseTo(1, 4)
+    expect(computeFilmStates(0.405).chipLift).toBeCloseTo(1, 4)
+    expect(computeFilmStates(0.37).chipFocus).toBe(0)
+    expect(computeFilmStates(0.44).chipFocus).toBe(0)
     expect(computeFilmStates(0.53).chipFocus).toBe(0)
+  })
+
+  it('opens a layerWindow across one layer with lead and tail', () => {
+    expect(layerWindow(5, 5, 0.5, 0.5)).toBe(1)
+    expect(layerWindow(5.5, 5, 0.5, 0.5)).toBe(1)
+    expect(layerWindow(4.5, 5, 0.5, 0.5)).toBe(0)
+    expect(layerWindow(6.5, 5, 0.5, 0.5)).toBe(0)
+    const mid = layerWindow(4.75, 5, 0.5, 0.5)
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(1)
   })
 
   it('ramps plateaus up, holds, and descends', () => {
@@ -57,14 +72,13 @@ describe('film states', () => {
     }
   })
 
-  it('returns every scalar to 0 at the end except screenOn, layerCursor, and stageRamp', () => {
+  it('returns every scalar to 0 at the end except screenOn and layerCursor', () => {
     const end = computeFilmStates(1)
     for (const [name, value] of Object.entries(end)) {
-      // screenOn stays lit, the cursor parks at the last layer, and the
-      // stage keeps its arrival lightness: monotonic journeys, not windows.
+      // screenOn stays lit and the cursor parks at the last layer:
+      // monotonic journeys, not windows.
       if (name === 'screenOn') expect(value).toBeGreaterThan(0)
       else if (name === 'layerCursor') expect(value).toBe(10)
-      else if (name === 'stageRamp') expect(value).toBe(1)
       else expect(value, name).toBe(0)
     }
   })

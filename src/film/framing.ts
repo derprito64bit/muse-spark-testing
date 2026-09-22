@@ -1,4 +1,5 @@
 import { silhouetteHeightM, silhouetteWidthM } from '../components/PhoneViewer/phoneDimensions.ts'
+import { TEARDOWN_LAYERS, cursorAt } from './teardown/layers.ts'
 
 export interface FitOptions {
   /** Target share of viewport height the phone should fill. */
@@ -77,19 +78,32 @@ export function centerBias(aspect: number, axis: 'x' | 'y'): number {
 }
 
 const MACRO_REGIONS: ReadonlyArray<{ start: number; end: number; halfM: number }> = [
-  { start: 0.39, end: 0.47, halfM: 0.0125 },
   { start: 0.62, end: 0.72, halfM: 0.036 },
   { start: 0.895, end: 0.925, halfM: 0.017 },
 ]
 
-/** Minimum vertical FOV keeping a macro subject framed on narrow viewports. */
+/** Teardown feature run guarded per featured layer (round 01 A4). */
+const TEARDOWN_MACRO = { start: 0.39, end: 0.47 }
+
+/**
+ * Minimum vertical FOV keeping a macro subject framed on narrow viewports.
+ * Over the teardown run the floor follows the currently featured layer's
+ * own half-height from the manifest (logic-board 0.069 sets the widest in
+ * this span, silicon 0.0125 the tightest) instead of one die-sized floor
+ * for layers with very different footprints.
+ */
 export function macroFloorFov(p: number, distanceM: number, aspect: number): number {
-  for (const region of MACRO_REGIONS) {
-    if (p >= region.start && p <= region.end) {
-      const denom = distanceM * Math.max(aspect, 0.35) * 0.8
-      if (denom <= 0) return 0
-      return Math.min(85, (2 * Math.atan(region.halfM / denom) * 180) / Math.PI)
+  let halfM = 0
+  if (p >= TEARDOWN_MACRO.start && p <= TEARDOWN_MACRO.end) {
+    const featured = Math.min(9, Math.max(0, Math.floor(cursorAt(p))))
+    halfM = TEARDOWN_LAYERS[featured]?.featureHalfM ?? 0
+  } else {
+    for (const region of MACRO_REGIONS) {
+      if (p >= region.start && p <= region.end) halfM = region.halfM
     }
   }
-  return 0
+  if (halfM <= 0) return 0
+  const denom = distanceM * Math.max(aspect, 0.35) * 0.8
+  if (denom <= 0) return 0
+  return Math.min(85, (2 * Math.atan(halfM / denom) * 180) / Math.PI)
 }

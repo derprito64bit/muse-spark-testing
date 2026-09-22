@@ -17,8 +17,8 @@ Sync ritual: work in build repo, then copy (excluding `.git`,
 
 ## Milestones: M0-M10 DONE (M9/M10 this session, honest gaps listed
 
-below). M3R + Prompt A + Prompt B DONE (newest spec governs: plateau,
-not dial). All uncommitted.
+below). M3R + Prompt A + Prompt B DONE (newest spec governs: A2 circular
+module — D7 reversed, see below). All uncommitted.
 
 ## Decisions (binding)
 
@@ -30,10 +30,13 @@ not dial). All uncommitted.
 - D5 Meters are sequential (one aether hue + ink labels); no categorical
   palette ships (validator proved a 4-blue categorical fails).
 - D6 `.spec-tech` uses faint token (4.5:1 everywhere).
-- D7 **Dial camera retired 2026-09-20**: Prompt A §5.2 (newest design
-  authority) specifies the offset two-tier plateau with L lenses.
-  CameraAssembly rebuilt as the plateau; film macro keys retargeted to the
-  upper shelf; optics internals follow LENS_LAYOUT.
+- D7 **Dial camera retired 2026-09-20, REINSTATED as circular module
+  2026-09-21 (Prompt A2 supersedes Prompt A §5)**: the offset two-tier
+  plateau is gone — no ISLAND constant remains. Current module: centred
+  at (0, 0.0458), outerR 0.0235 (47mm), double-step collar, three round
+  lenses on a triangle (R 0.0102) + rectangular periscope below, arc
+  flash, ToF pair, iris medallion. Code wins over older docs: check
+  `phoneDimensions.ts` first.
 
 ## Hard-won environment facts
 
@@ -49,7 +52,7 @@ not dial). All uncommitted.
 ## Open threads
 
 - Prompt A+B DONE 2026-09-20 (uncommitted): plateau per newest spec
-  (D7 dial retired), 5 finishes/families, 4-rail grain, studio env +
+  (D7 dial retired — superseded 2026-09-21 by the A2 circular module), 5 finishes/families, 4-rail grain, studio env +
   RectArea rig + rear softbox, etched logo, punch-hole, subpixel LOD,
   explode.ts registry (22 parts) + per-part Internals loop, 6 new film
   states, ShotProfile caps + damped position/aim, chip/camera holds,

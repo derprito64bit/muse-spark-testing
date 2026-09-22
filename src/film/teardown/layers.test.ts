@@ -56,6 +56,18 @@ describe('teardown layers', () => {
     expect(weightDamp('medium')).toBeLessThan(weightDamp('light'))
   })
 
+  it('sizes every featured subject for the macro floor (round 01 A4)', () => {
+    for (const layer of TEARDOWN_LAYERS) {
+      expect(layer.featureHalfM, layer.id).toBeGreaterThan(0)
+      expect(layer.featureHalfM, layer.id).toBeLessThanOrEqual(0.08)
+    }
+    const byId = (id: string): number => TEARDOWN_LAYERS.find((l) => l.id === id)?.featureHalfM ?? 0
+    // Silicon keeps the old die-sized floor; the board sets the widest.
+    expect(byId('silicon')).toBe(0.0125)
+    expect(byId('logic-board')).toBeGreaterThan(byId('silicon'))
+    expect(byId('cover-glass')).toBe(0.08)
+  })
+
   it('runs the cursor 0 to 10 across the feature run', () => {
     expect(cursorAt(0.29)).toBe(0)
     expect(cursorAt(0.305)).toBeCloseTo(0.5, 2)
@@ -83,18 +95,33 @@ describe('teardown layers', () => {
     expect(frame.scale).toBe(0)
   })
 
-  it('snaps envelopes binary under reduced motion', () => {
+  it('cross-fades envelopes linearly under reduced motion (round 01 A7)', () => {
+    // No tumble, no overshoot, and no binary teleport: every channel moves
+    // continuously with local progress so scrubbing stays exact.
     const frame: FeatureFrame = { detach: 0, turn: 0, scale: 0 }
     featureFrame(0.4, 'light', frame, true)
-    expect(frame.detach).toBe(1)
-    expect(frame.turn).toBe(1)
-    featureFrame(0.66, 'medium', frame, true)
-    expect(frame.scale).toBe(1)
+    expect(frame.detach).toBeCloseTo(1, 2)
+    expect(frame.turn).toBe(0)
+    featureFrame(0.56, 'medium', frame, true)
+    expect(frame.scale).toBeGreaterThan(0.4)
+    expect(frame.scale).toBeLessThan(0.6)
     featureFrame(0.9, 'medium', frame, true)
-    expect(frame.detach).toBe(1)
+    expect(frame.detach).toBeGreaterThan(0)
+    expect(frame.detach).toBeLessThan(1)
     expect(frame.turn).toBe(0)
     featureFrame(0.01, 'medium', frame, true)
     expect(frame.detach).toBe(0)
+    featureFrame(0.99, 'medium', frame, true)
+    expect(frame.detach).toBe(0)
+    // Continuity: fine sampling never jumps.
+    let prev = -1
+    for (let i = 0; i <= 100; i++) {
+      featureFrame(i / 100, 'light', frame, true)
+      if (prev >= 0) {
+        expect(Math.abs(frame.detach - prev)).toBeLessThan(0.1)
+      }
+      prev = frame.detach
+    }
   })
 
   it('keeps every accent distinct', () => {
