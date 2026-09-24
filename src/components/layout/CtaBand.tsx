@@ -13,7 +13,7 @@ export function CtaBand() {
         <p className="mt-6">
           <Link
             to="/#buy"
-            className="rounded-full bg-(--color-aether-strong) px-5 py-2.5 text-sm font-semibold text-black"
+            className="rounded-full bg-(--color-aether-strong) px-5 py-2.5 text-sm font-semibold text-(--color-ink-inverse)"
           >
             Configure yours
           </Link>

@@ -20,7 +20,7 @@ export interface StageLightState {
 }
 
 /** Per-act studio lighting. Damped between acts at 5/s, never snapped. */
-export const STAGE_LIGHTING: Record<ActId, StageLightState> = {
+const BASE_LIGHTING: Record<ActId, StageLightState> = {
   arrival: {
     key: 2.2,
     fill: 0.7,
@@ -132,3 +132,28 @@ export const STAGE_LIGHTING: Record<ActId, StageLightState> = {
     stageTop: '#565e78',
   },
 }
+
+/**
+ * Overnight detail-review boost: brighter key/fill/rim/env plus a touch
+ * more exposure so small hardware reads at a glance. Ratios and mood
+ * carry over — every act scales by the same factors. Stage colors and
+ * env tints pass through untouched (colour journey tests pin them).
+ */
+function brighten(state: StageLightState): StageLightState {
+  const r2 = (v: number): number => Math.round(v * 100) / 100
+  return {
+    ...state,
+    key: r2(state.key * 1.35),
+    fill: r2(state.fill * 1.6),
+    rim: r2(state.rim * 1.3),
+    env: r2(state.env * 1.15),
+    exposure: r2(Math.min(1.15, state.exposure + 0.08)),
+  }
+}
+
+export const STAGE_LIGHTING: Record<ActId, StageLightState> = Object.fromEntries(
+  (Object.entries(BASE_LIGHTING) as Array<[ActId, StageLightState]>).map(([id, s]) => [
+    id,
+    brighten(s),
+  ]),
+) as Record<ActId, StageLightState>

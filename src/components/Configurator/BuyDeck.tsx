@@ -88,7 +88,7 @@ function BuyDeckInner() {
             </div>
           </div>
         </div>
-        <div className="sticky bottom-4 mx-8 mb-8 flex items-center justify-between rounded-full border border-(--color-border-hairline) bg-(--color-scrim) px-6 py-3 backdrop-blur-md md:mx-12">
+        <div className="sticky bottom-4 mx-8 mb-8 flex items-center justify-between rounded-full border border-(--color-border-hairline) bg-(--color-surface)/85 px-6 py-3 backdrop-blur-md md:mx-12">
           <p className="text-sm text-(--color-dim)">
             {active.name} · {option.label}
           </p>
@@ -96,7 +96,7 @@ function BuyDeckInner() {
             <span className="spec-num text-2xl" data-testid="buy-price">
               {formatPrice(option.price)}
             </span>
-            <span className="rounded-full bg-(--color-aether-strong) px-5 py-2 text-sm font-semibold text-black">
+            <span className="rounded-full bg-(--color-aether-strong) px-5 py-2 text-sm font-semibold text-(--color-ink-inverse)">
               Buy
             </span>
           </p>

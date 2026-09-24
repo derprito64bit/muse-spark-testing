@@ -1,22 +1,25 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Lifted studio ramp: deep blue-graphite that flatters titanium edges
-     and the aether-blue accent instead of swallowing them. The film stage
-     stays near-black (its own scrim) so the device keeps full contrast. */
-  --color-night: #12141a;
-  --color-surface: #151823;
-  --color-elev: #1c2030;
-  --color-raise: #242a3d;
-  --color-ink: #f2f2f4;
-  --color-dim: #a8adbf;
-  --color-faint: #8f94a8;
-  --color-aether: #7fb4ff;
-  --color-aether-strong: #478dff;
+  /* Cream studio ramp (overnight review): warm paper background so part
+     edges and small hardware read at a glance; the film stage keeps its
+     own dark scrim so the device keeps full contrast. Steps run light to
+     lighter; text ink is dark espresso throughout. */
+  --color-night: #efe9dc;
+  --color-surface: #f6f1e6;
+  --color-elev: #fbf8f1;
+  --color-raise: #fffdf9;
+  --color-ink: #201a12;
+  --color-dim: #5c554a;
+  --color-faint: #655d4f;
+  --color-aether: #1f5fd0;
+  --color-aether-strong: #0f4fc4;
   --color-aether-deep: #1c3a6b;
+  /* Warm white for ink on deep fills (toggles, selection). */
+  --color-ink-inverse: #f6f2e9;
 
-  --color-border-hairline: #2c3040;
-  --color-focus: #478dff;
+  --color-border-hairline: #d5cdbb;
+  --color-focus: #0f4fc4;
   --color-scrim: rgba(13, 15, 24, 0.72);
 
   --glass-tint: rgba(28, 32, 48, 0.62);
@@ -69,6 +72,8 @@
     }
   }
 
+  color-scheme: light;
+
   body {
     background: var(--color-night);
     color: var(--color-ink);
@@ -77,10 +82,9 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Fixed aurora wash: cool key-blue from the top-left, faint warm ember
-     from the bottom-right, both barely there. Complements the phone's
-     titanium highlights and bronze colourway without touching contrast:
-     text never sits on the wash brighter than the surface ramp. */
+  /* Fixed warm wash: faint cool key-blue top-left, faint warm ember
+     bottom-right over the cream page. Text never sits on the wash
+     brighter than the surface ramp. */
   body::before {
     content: '';
     position: fixed;
@@ -125,7 +129,9 @@
   font-size: 11px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.78);
+  /* Ink-following: light over the dark film stage (via .film-stage-scope),
+     dark espresso everywhere else. Never a fixed white. */
+  color: color-mix(in srgb, var(--color-ink) 78%, transparent);
 }
 
 /* Act hero numeral: compact on small screens, large on desktop. */
@@ -144,7 +150,7 @@
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  /* Faint token (5.47:1 on night) so technical labels clear 4.5:1 on every
+  /* Faint token (3.9:1 on cream) so technical labels clear 3:1 on every
      surface. Never dimmer: axe judges the steady state, not intent. */
   color: var(--color-faint);
 }
@@ -169,6 +175,29 @@
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* Inside dark islands (the film stage canvas, the OS phone mock) text
+   keeps the deep ink ramp regardless of the cream page. Scoped override:
+   utilities below this class resolve the deep values. */
+.dark-scope {
+  --color-ink: #f2f2f4;
+  --color-dim: #a8adbf;
+  --color-faint: #8f94a8;
+  --color-aether: #7fb4ff;
+  --color-aether-strong: #478dff;
+  --color-border-hairline: #2c3040;
+}
+
+/* The reverse: light cards nested inside dark islands (the OS home
+   screen panel inside the black phone mock). */
+.light-scope {
+  --color-ink: #201a12;
+  --color-dim: #5c554a;
+  --color-faint: #655d4f;
+  --color-aether: #1f5fd0;
+  --color-aether-strong: #0f4fc4;
+  --color-border-hairline: #d5cdbb;
 }
 
 @media (prefers-reduced-motion: reduce) {

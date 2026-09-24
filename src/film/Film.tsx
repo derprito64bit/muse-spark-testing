@@ -184,7 +184,7 @@ export function Film() {
       <h1 className="sr-only">Aether One X: power, without the noise.</h1>
       <div
         ref={stage}
-        className="sticky top-0 h-screen w-full overflow-hidden supports-[height:100svh]:h-[100svh]"
+        className="dark-scope sticky top-0 h-screen w-full overflow-hidden supports-[height:100svh]:h-[100svh]"
       >
         <Suspense
           fallback={

@@ -6,28 +6,29 @@ Source of truth: `src/index.css` under `@theme`. No raw hex in components.
 
 | Token     | Value     | Use             |
 | --------- | --------- | --------------- |
-| `night`   | `#101220` | page background |
-| `surface` | `#151823` | cards, panels   |
-| `elev`    | `#1c2030` | raised          |
-| `raise`   | `#242a3d` | topmost         |
+| `night`   | `#efe9dc` | page background |
+| `surface` | `#f6f1e6` | cards, panels   |
+| `elev`    | `#fbf8f1` | raised          |
+| `raise`   | `#fffdf9` | topmost         |
 
-Four steps, each a measurable step apart in lightness. Lifted 2026-09-21
-from near-black to blue-graphite so titanium edges and the aether-blue
-accent read against the page; the film stage keeps its own near-black
-scrim for device contrast. A fixed aurora wash (key-blue top-left, faint
-ember bottom-right) sits behind everything at negligible alpha.
+Cream studio ramp (overnight review): warm paper so part edges read at
+a glance. Steps run light to lighter. The film stage keeps its dark
+canvas; overlay text inside the stage keeps the deep ink ramp via the
+`.film-stage-scope` override, since dark text on the dark canvas would
+vanish. Fixed aurora wash stays at negligible alpha.
 
-## Contrast (measured 2026-09-21, WCAG relative luminance)
+## Contrast (measured, WCAG relative luminance)
 
-| Foreground                | Background | Ratio   | Requirement        | Result                          |
-| ------------------------- | ---------- | ------- | ------------------ | ------------------------------- |
-| `ink` `#f2f2f4`           | `night`    | 16.63:1 | 7:1 primary        | pass                            |
-| `dim` `#a8adbf`           | `night`    | 8.32:1  | 4.5:1 secondary    | pass                            |
-| `faint` `#8f94a8`         | `night`    | 6.17:1  | 3:1 technical only | pass, non-essential labels only |
-| `aether` `#7fb4ff`        | `night`    | 8.74:1  | 4.5:1 live data    | pass                            |
-| `aether-strong` `#478dff` | `night`    | 5.77:1  | 4.5:1 focus/active | pass                            |
-| `ink`                     | `surface`  | 15.83:1 | 7:1                | pass                            |
-| `dim`                     | `surface`  | 7.92:1  | 4.5:1              | pass                            |
+| Foreground                | Background    | Ratio   | Requirement        | Result                          |
+| ------------------------- | ------------- | ------- | ------------------ | ------------------------------- |
+| `ink` `#201a12`           | `night`       | 14.2:1  | 7:1 primary        | pass                            |
+| `dim` `#5c554a`           | `night`       | 6.08:1  | 4.5:1 secondary    | pass                            |
+| `faint` `#655d4f`         | `night`    | 5.36:1 | 3:1 technical only | pass, non-essential labels only |
+| `aether` `#1f5fd0`        | `night`       | 4.80:1  | 4.5:1 live data    | pass                            |
+| `aether-strong` `#0f4fc4` | `night`       | 5.90:1  | 4.5:1 focus/active | pass                            |
+| `ink`                     | `surface`     | 15.31:1 | 7:1                | pass                            |
+| `dim`                     | `surface`     | 6.53:1  | 4.5:1              | pass                            |
+| `ink-inverse` `#f6f2e9`   | `aether-deep` | ~10:1   | 4.5:1 toggles      | pass                            |
 
 `faint` never carries essential information. Text on glass must clear 4.5:1
 against the worst-case backdrop, which means an opaque scrim behind text.

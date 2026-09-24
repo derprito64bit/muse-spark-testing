@@ -41,7 +41,7 @@ export function AetherOSPhone() {
         <div className="flex justify-center">
           <div
             data-testid="os-phone"
-            className="w-[280px] rounded-[36px] border border-(--color-border-hairline) bg-black p-3"
+            className="dark-scope w-[280px] rounded-[36px] border border-(--color-border-hairline) bg-black p-3"
           >
             <div className="flex h-11 items-center justify-between px-3">
               <span className="spec-tech">9:41</span>
@@ -58,7 +58,7 @@ export function AetherOSPhone() {
                 {notifications.length > 0 ? `${notifications.length} new` : 'Clear'}
               </button>
             </div>
-            <div className="min-h-[420px] rounded-[26px] bg-(--color-surface) p-4">
+            <div className="light-scope min-h-[420px] rounded-[26px] bg-(--color-surface) p-4">
               {screen.name === 'home' && (
                 <ul aria-label="Apps" className="grid grid-cols-4 gap-3">
                   {OS_APPS.map((app) => (
@@ -136,7 +136,7 @@ export function AetherOSPhone() {
                         onClick={() => flip(k)}
                         data-testid={`os-toggle-${k}`}
                         data-on={v}
-                        className="min-h-11 rounded-xl border border-(--color-border-hairline) px-3 text-sm capitalize data-[on=true]:bg-(--color-aether-deep) data-[on=true]:text-(--color-ink)"
+                        className="min-h-11 rounded-xl border border-(--color-border-hairline) px-3 text-sm capitalize data-[on=true]:bg-(--color-aether-deep) data-[on=true]:text-(--color-ink-inverse)"
                       >
                         {k}
                       </button>

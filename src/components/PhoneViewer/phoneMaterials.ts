@@ -308,11 +308,11 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
   const lensGlassB = makeLensGlass('#140f1c', [200, 420])
   const lensGlassC = makeLensGlass('#0a101d', [100, 200])
   const lensBarrel = makeMaterial({
-    color: new Color('#171b22'),
+    color: new Color('#1e232c'),
     metalness: 0.95,
     roughness: 0.55,
     roughnessMap: barrelGradient,
-    envMapIntensity: 0.5,
+    envMapIntensity: 0.85,
   })
   const lensCavity = makeMaterial({
     color: new Color('#04060b'),
