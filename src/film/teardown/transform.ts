@@ -40,9 +40,20 @@ export function applyLayerTransform(
 ): void {
   featureFrame(clamp01(cursor - layer.index), layer.weight, frame, reduced)
   const off = slotZ ?? layerOffset(layer.index, 10, gap, sep)
-  const gx = FEATURE_OFFSET.x * frame.detach
-  const gy = FEATURE_OFFSET.y * frame.detach
-  const gz = off + FEATURE_OFFSET.z * frame.detach
+  // Scale about the hero pivot, not the group origin (overnight fix):
+  // part groups carry layout offsets, and scaling those about the phone
+  // origin displaces the hero by (scale-1) × offset. Counter-translate by
+  // the flipped pivot so the featured part stays centered. Exact at rest
+  // (scale 1 → no compensation).
+  const bumpScale =
+    1 + (layer.featureScale - 1) * frame.scale * (gap <= LAYER_GAP_COMPACT ? 0.85 : 1)
+  const theta = FLIP.x * frame.turn
+  const cosT = Math.cos(theta)
+  const sinT = Math.sin(theta)
+  const k = bumpScale - 1
+  const gx = FEATURE_OFFSET.x * frame.detach - k * layer.heroPivot[0]
+  const gy = FEATURE_OFFSET.y * frame.detach - k * (layer.heroPivot[1] * cosT)
+  const gz = off + FEATURE_OFFSET.z * frame.detach - k * (layer.heroPivot[1] * sinT)
   // Snap on jumps (overnight fling fix): smooth scroll moves goals
   // sub-millimeter per frame and damps invisibly; a flick moves them
   // centimeters, and damping toward a receding goal is what reads as
@@ -55,11 +66,9 @@ export function applyLayerTransform(
   group.position.y += (gy - group.position.y) * d
   group.position.z += (gz - group.position.z) * d
   group.rotation.set(FLIP.x * frame.turn, FLIP.y * frame.turn, FLIP.z * frame.turn)
-  // Compact viewports shrink the hero bump so the layer never crops.
-  // The gap is one of two discrete values; <= COMPACT selects the compact
-  // path exactly as the drivers' old `< 0.008` comparison did.
-  const bump = (layer.featureScale - 1) * frame.scale * (gap <= LAYER_GAP_COMPACT ? 0.85 : 1)
-  group.scale.setScalar(1 + bump)
+  // Compact viewports shrink the hero bump so the layer never crops (the
+  // gap comparison above already selected it into bumpScale).
+  group.scale.setScalar(bumpScale)
 }
 
 type V3 = readonly [number, number, number]

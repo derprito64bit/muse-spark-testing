@@ -27,9 +27,26 @@ describe('applyLayerTransform', () => {
   it('honours the module slot override for nested groups', () => {
     const g = new Group()
     // Detached hold plateau (lp in the hold window), full damp: lands on
-    // the overridden slot, not the layer's own.
-    applyLayerTransform(g, TEARDOWN_LAYERS[8]!, 8.66, 1, 0.0085, 1, false, frame(), 0.0123)
+    // the overridden slot, not the layer's own. Cover glass pivots at the
+    // origin, so the pivot compensation is exactly zero here.
+    applyLayerTransform(g, TEARDOWN_LAYERS[0]!, 0.66, 1, 0.0085, 1, false, frame(), 0.0123)
     expect(g.position.z).toBeCloseTo(0.0123 + 0.014, 9)
+  })
+
+  it('counter-translates scaled heroes about their pivot', () => {
+    // Silicon pivots at its package, not the phone origin: with a live
+    // scale bump the goal shifts slightly toward the pivot versus a
+    // pivot-less layer, and matches exactly when the bump is zero.
+    const silicon = TEARDOWN_LAYERS[5]!
+    const flat = { ...silicon, heroPivot: [0, 0] as const }
+    const a = new Group()
+    const b = new Group()
+    applyLayerTransform(a, silicon, 5.66, 1, 0.0085, 1, false, frame())
+    applyLayerTransform(b, flat, 5.66, 1, 0.0085, 1, false, frame())
+    const dz = a.position.z - b.position.z
+    expect(Math.abs(dz)).toBeGreaterThan(0)
+    expect(Math.abs(dz)).toBeLessThan(0.002)
+    expect(dz).toBeLessThan(0)
   })
 
   it('is deterministic and reversible from the same inputs', () => {

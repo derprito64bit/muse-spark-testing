@@ -76,6 +76,53 @@ export function FilmOverlay({ progress, runway }: FilmOverlayProps) {
     return () => window.clearInterval(timer)
   }, [act.id])
 
+  // Auto-scroll the teardown showcase (overnight watchability): one press
+  // plays the ten feature windows at ~3s per layer, so each flip (about
+  // half the window) takes the better part of two seconds to face the
+  // user. Any manual input (wheel, touch, keys) takes over instantly.
+  // Never offered under reduced motion. Pure scroll driving — the film
+  // follows exactly.
+  const [playing, setPlaying] = useState(false)
+  useEffect(() => {
+    if (!playing) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setPlaying(false)
+      return
+    }
+    let raf = 0
+    let last = performance.now()
+    const stop = (): void => setPlaying(false)
+    const onInterrupt = (): void => stop()
+    window.addEventListener('wheel', onInterrupt, { passive: true })
+    window.addEventListener('touchstart', onInterrupt, { passive: true })
+    window.addEventListener('keydown', onInterrupt)
+    const step = (now: number): void => {
+      raf = requestAnimationFrame(step)
+      const dt = Math.min(0.1, (now - last) / 1000)
+      last = now
+      const el = runway.current
+      if (el === null) return
+      const rect = el.getBoundingClientRect()
+      const top = rect.top + window.scrollY
+      const span = rect.height - window.innerHeight
+      if (span <= 0) return
+      const p = (window.scrollY - top) / span
+      const np = p + (dt * 0.2) / 30
+      if (np >= 0.495 || p >= 0.52) {
+        stop()
+        return
+      }
+      scrollToProgress(el, Math.max(np, 0.295), 'auto')
+    }
+    raf = requestAnimationFrame(step)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('wheel', onInterrupt)
+      window.removeEventListener('touchstart', onInterrupt)
+      window.removeEventListener('keydown', onInterrupt)
+    }
+  }, [playing, runway])
+
   // Keyboard film navigation: arrows jump between acts with an aria-live
   // announcement of the act name (the chapter container below is the live
   // region). Ignored inside text fields and the dev scrubber slider.
@@ -193,6 +240,19 @@ export function FilmOverlay({ progress, runway }: FilmOverlayProps) {
       ) : null}
 
       {act.id === 'teardown' && <Callouts progress={progress} />}
+
+      {act.id === 'teardown' ? (
+        <button
+          type="button"
+          aria-pressed={playing}
+          aria-label={playing ? 'Pause the teardown showcase' : 'Play the teardown showcase'}
+          data-testid="teardown-play"
+          onClick={() => setPlaying((v) => !v)}
+          className="kicker pointer-events-auto absolute bottom-8 right-4 opacity-70 hover:opacity-100 md:right-16"
+        >
+          {playing ? 'Pause ❚❚' : 'Play showcase ▸'}
+        </button>
+      ) : null}
 
       <nav
         aria-label="Film acts"

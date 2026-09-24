@@ -22,6 +22,14 @@ export interface TeardownLayer {
   /** Hero-side scale bump when featured. */
   featureScale: number
   /**
+   * Phone-local pivot the hero scale acts about (overnight fix). Shell
+   * children sit near the origin, but part groups carry layout offsets —
+   * scaling those groups about the origin displaces the hero by
+   * (scale-1) × offset (4mm+ for the die). The driver counter-translates
+   * by the flipped pivot so the featured part stays centered.
+   */
+  heroPivot: readonly [number, number]
+  /**
    * Half-height of the featured subject in meters (round 01 A4). Drives the
    * narrow-viewport macro floor so the featured layer never crops: full
    * phone for shell layers, measured part bounds for internals (see the
@@ -53,6 +61,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'cover-glass',
     accent: '#9fd4ff',
     featureScale: 1.1,
+    heroPivot: [0, 0] as const,
     featureHalfM: 0.08, // full phone silhouette (159.6mm)
     weight: 'light',
   },
@@ -64,6 +73,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'display',
     accent: '#cfe9ff',
     featureScale: 1.08,
+    heroPivot: [0, 0] as const,
     featureHalfM: 0.08,
     weight: 'light',
   },
@@ -75,6 +85,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'midframe',
     accent: '#b8c2d0',
     featureScale: 1.04,
+    heroPivot: [0, 0] as const,
     featureHalfM: 0.08,
     weight: 'heavy',
   },
@@ -86,6 +97,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'battery',
     accent: '#c4d99a',
     featureScale: 1.06,
+    heroPivot: [0, -0.021] as const,
     featureHalfM: 0.039, // cell h 0.078
     weight: 'heavy',
   },
@@ -114,6 +126,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'logic-board',
     accent: '#7fd4b0',
     featureScale: 1.08,
+    heroPivot: [0, 0.042] as const,
     featureHalfM: 0.069, // main + sub board union, y -0.0725 to 0.065
     weight: 'medium',
   },
@@ -125,6 +138,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'silicon',
     accent: '#ffc978',
     featureScale: 1.12,
+    heroPivot: [-0.013, 0.0345] as const,
     featureHalfM: 0.0125, // SoC package + BGA array
     weight: 'medium',
   },
@@ -136,6 +150,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'thermal',
     accent: '#b9aecb',
     featureScale: 1.06,
+    heroPivot: [0, 0.02] as const,
     featureHalfM: 0.045, // graphite sheet h 0.09, tallest in the layer
     weight: 'light',
   },
@@ -147,6 +162,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'power-coil',
     accent: '#e09a5f',
     featureScale: 1.08,
+    heroPivot: [0, -0.008] as const,
     featureHalfM: 0.026, // NFC ring rOut, outboard of the coil
     weight: 'medium',
   },
@@ -166,6 +182,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'camera',
     accent: '#8fd8e0',
     featureScale: 1.1,
+    heroPivot: [0, 0.0458] as const,
     featureHalfM: 0.024, // module outerR 0.0235
     weight: 'medium',
   },
@@ -177,6 +194,7 @@ export const TEARDOWN_LAYERS: TeardownLayer[] = [
     copyKey: 'rear-panel',
     accent: '#c8ccd4',
     featureScale: 1.04,
+    heroPivot: [0, 0] as const,
     featureHalfM: 0.08, // full phone silhouette
     weight: 'medium',
   },
@@ -229,15 +247,16 @@ export interface FeatureFrame {
 }
 
 /**
- * Four-phase feature envelope from local progress: detach 0-0.20, flip
- * 0.08-0.50, hold 0.55-0.85, restack 0.80-1.0. The flip runs slower than
- * the old 0.18-0.52 transit but completes earlier, so the face-on plateau
- * (0.50-0.80) is wider than before: every layer sits face-on long enough
- * to read, with scroll headroom on both sides. Writes into `out`: zero
- * allocation per frame. Light layers overshoot on arrival; heavy layers
- * never do. Under reduced motion there is no tumble and no overshoot:
- * detach and scale cross-fade linearly across the same phase landmarks
- * instead of stepping, so scrubbing never teleports a layer (round 01 A7).
+ * Four-phase feature envelope from local progress: detach 0-0.15, flip
+ * 0.25-0.70, hold 0.60-0.85, restack 0.85-1.0. Sequential by construction
+ * (overnight fix): the next layer starts turning only once the previous
+ * one is fully restacked, so exactly one part ever flips at a time. The
+ * flip transit is slow and the hold plateau wide — scroll headroom on
+ * both sides of every face-on beat. Writes into `out`: zero allocation
+ * per frame. Light layers overshoot on arrival; heavy layers never do.
+ * Under reduced motion there is no tumble and no overshoot: detach and
+ * scale cross-fade linearly across the same phase landmarks instead of
+ * stepping, so scrubbing never teleports a layer (round 01 A7).
  */
 export function featureFrame(
   lp: number,
@@ -247,19 +266,19 @@ export function featureFrame(
 ): FeatureFrame {
   if (snap) {
     const clamp01 = (t: number): number => Math.min(1, Math.max(0, t))
-    const up = clamp01((lp - 0.02) / 0.18)
-    const release = clamp01((0.98 - lp) / 0.18)
+    const up = clamp01((lp - 0.02) / 0.13)
+    const release = clamp01((0.98 - lp) / 0.13)
     out.detach = Math.min(up, release)
     out.turn = 0
-    out.scale = Math.min(clamp01((lp - 0.55) / 0.08), clamp01((0.85 - lp) / 0.08))
+    out.scale = Math.min(clamp01((lp - 0.6) / 0.08), clamp01((0.85 - lp) / 0.08))
     return out
   }
-  const back = smooth01((lp - 0.8) / 0.2)
+  const back = smooth01((lp - 0.85) / 0.15)
   const amp = 1 - back
-  const raw = lp / 0.2
+  const raw = lp / 0.15
   out.detach = (weight === 'light' ? easeOutBack01(raw) : smooth01(raw)) * amp
-  out.turn = smooth01((lp - 0.08) / 0.42) * amp
-  out.scale = smooth01((lp - 0.55) / 0.3) * amp
+  out.turn = smooth01((lp - 0.25) / 0.45) * amp
+  out.scale = smooth01((lp - 0.6) / 0.25) * amp
   return out
 }
 

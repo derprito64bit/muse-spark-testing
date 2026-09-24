@@ -123,7 +123,7 @@ const NO_DEPTH_WRITE: ReadonlySet<string> = new Set([
 
 /**
  * Context recede map (Prompt D section 5.1): shell materials per teardown
- * layer. Unfeatured layers step back to 45% over the ghost dissolve while
+ * layer. Unfeatured layers step back to 30% over the ghost dissolve while
  * the featured layer keeps its rest opacity. Internals share materials
  * across layers, so the pop there comes from the accent light and motion
  * instead (documented in docs/teardown.md).
@@ -552,10 +552,12 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
         }
       }
       // Context recede over the ghost dissolve; featured keeps rest opacity.
+      // Unfeatured layers fall to 30% so the hero stands isolated instead
+      // of merging with the stack behind it (overnight isolation fix).
       for (const layer of TEARDOWN_LAYERS) {
         const mats = RECEDE_MATS[layer.id]
         if (mats === undefined) continue
-        const dim = layer.index === featured ? 1 : 1 - 0.55 * st.contextRecede
+        const dim = layer.index === featured ? 1 : 1 - 0.7 * st.contextRecede
         for (const m of mats) {
           const base = BASE_OPACITY[m] ?? 1
           materials[m].opacity = ghost

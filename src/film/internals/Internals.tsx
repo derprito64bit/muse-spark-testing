@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
+import { useMemo, useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { INTERNALS_KEYS, type InternalsMaterialSet } from './internalsMaterials.ts'
 import { EXPLODE_DIRECTIONS, EXPLODE_PARTS, partProgress } from './explode.ts'
@@ -7,7 +7,6 @@ import { PART_LAYER, TEARDOWN_LAYERS, weightDamp, type FeatureFrame } from '../t
 import { applyLayerTransform } from '../teardown/transform.ts'
 import { calloutBridge, featureAnchorBridge } from '../overlay/callouts.ts'
 import { BoardPart } from './parts/board.tsx'
-import { CARRIER_PLATES, CarrierPlates } from './parts/carriers.tsx'
 import { OpticsPart } from './parts/optics.tsx'
 import { featureCalloutPart } from '../chapters.ts'
 import { PowerPart } from './parts/power.tsx'
@@ -69,22 +68,6 @@ export function Internals({ materials, control }: InternalsProps) {
     }
   }, [])
 
-  // Carrier substrate: one shared material, faded with the assembly.
-  // Plain color, no map slot, disposed with the component. Unlit basic
-  // material in a blue-graphite tint so the strata read even in the
-  // dark stage wash; opacity stays low enough to never plate over parts.
-  const carrierMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: '#232c3d',
-        transparent: true,
-        opacity: 0.16,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      }),
-    [],
-  )
-  useEffect(() => () => carrierMaterial.dispose(), [carrierMaterial])
   useFrame((_, delta) => {
     const c = control.current
     for (const k of INTERNALS_KEYS) materials[k].opacity = c.opacity
@@ -141,38 +124,6 @@ export function Internals({ materials, control }: InternalsProps) {
       }
     }
     if (!visible) return
-
-    // Carrier plates ride their layers exactly like parts; visible only
-    // while separated (inside the assembled phone they would just cost
-    // fill). Opacity follows the assembly dissolve.
-    carrierMaterial.opacity = 0.16 * c.opacity
-    for (const carrier of CARRIER_PLATES) {
-      const targets = groups.current[carrier.id]
-      if (targets === undefined) continue
-      const layer = TEARDOWN_LAYERS[carrier.layer]
-      if (layer === undefined) continue
-      const carrierDamp =
-        teardown && !c.reducedMotion ? 1 - Math.exp(-delta * weightDamp(layer.weight)) : 1
-      for (const g of targets) {
-        g.visible = visible && teardown
-        if (teardown) {
-          applyLayerTransform(
-            g,
-            layer,
-            c.layerCursor,
-            sep,
-            c.teardownGap,
-            carrierDamp,
-            c.reducedMotion,
-            feat.current,
-          )
-        } else {
-          g.position.set(0, 0, 0)
-          g.rotation.set(0, 0, 0)
-          g.scale.setScalar(1)
-        }
-      }
-    }
 
     // Shield lids lift on their own window after the outer layers clear.
     const lidW = Math.min(1, Math.max(0, c.shieldLift))
@@ -236,7 +187,6 @@ export function Internals({ materials, control }: InternalsProps) {
       <SiliconPart materials={materials} register={register} />
       <PowerPart materials={materials} register={register} />
       <OpticsPart materials={materials} register={register} />
-      <CarrierPlates register={register} material={carrierMaterial} />
     </group>
   )
 }

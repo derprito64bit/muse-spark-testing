@@ -117,3 +117,27 @@ test(
     }
   },
 )
+
+test(
+  'teardown play auto-scrolls the showcase (overnight watchability)',
+  { timeout: 120000 },
+  async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByTestId('film-runway')).toBeVisible()
+    await page.getByRole('link', { name: 'Act 4: teardown' }).click()
+    await expect(page.getByTestId('film-chapter')).toHaveAttribute('data-act', 'teardown', {
+      timeout: 15000,
+    })
+    const play = page.getByTestId('teardown-play')
+    await expect(play).toBeVisible()
+    const before = await page.evaluate(() => window.scrollY)
+    await play.click()
+    await expect(play).toHaveAttribute('aria-pressed', 'true')
+    await page.waitForTimeout(6000)
+    const after = await page.evaluate(() => window.scrollY)
+    expect(after).toBeGreaterThan(before + 200)
+    await expect(page.getByTestId('film-chapter')).toHaveAttribute('data-act', 'teardown')
+    await play.click()
+    await expect(play).toHaveAttribute('aria-pressed', 'false')
+  },
+)
