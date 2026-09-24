@@ -10,16 +10,36 @@ After: `docs/film-snaps/act-teardown-*.png` (stack + ten layers).
   Prompt C part IDs (coverage asserted: every registry part exactly once).
 - `layerCursor` 0–10 continuous float drives everything per-layer; pure
   function of progress, reverses exactly.
-- Four-phase envelopes (detach / flip / hold / restack) with weight
-  damping (heavy 2.2, medium 4, light 5.5/s), light-layer overshoot, screw
-  spin as `explode × 2π`. Reduced motion snaps envelopes binary.
+- Four-phase envelopes (detach 0-0.20, flip 0.08-0.50, hold 0.55-0.85,
+  restack 0.80-1.0) with weight damping (heavy 2.2, medium 4, light 5.5/s),
+  light-layer overshoot, screw spin as `explode × 2π`. The flip is slow
+  but completes early so the face-on plateau is wide; flicks snap past
+  10mm/frame instead of lag-flinging. Reduced motion cross-fades envelopes
+  linearly (no tumble, no overshoot, no teleport); full reduce preference
+  serves the static fallback instead.
 - Turnover flip (π − 0.06 about hero-local x) brings rear-facing detail
-  (die marking, lens glass, wordmark) up to the overhead camera. A tilt
-  cancel was tried first and presented blank backs — wrong direction.
-- Featured layer detaches right toward the subject column, away from the
-  left text column; slot stays open in the stack.
+  (die marking, lens glass, wordmark) up to the camera.
+- Featured layer detaches right toward the subject column (offset x 0.07,
+  z 0.014 post round-03 hero pull-in), away from the left text column;
+  slot stays open in the stack. Scale bumps +0.04–0.12 by layer.
 - Shell recede (unfeatured shell to 45%) + feature accent on the rim
-  light + per-layer copy with accent figure underline.
+  light + per-layer copy with accent figure underline. The accent light
+  is single-writer: damped toward the featured layer's accent at 1.4
+  (converges; previously reset to stage tint every frame and ran at 8%).
+- Layer copy renders all ten cards stacked; a rAF loop writes
+  opacity/transform from the continuous cursor (pure function of
+  progress). No AnimatePresence queue to wedge on fast scrolls. Each
+  featured layer (2-8) also gets exactly one floating pointer naming
+  its part, anchored from a per-frame world-position bridge the
+  Internals driver publishes; shell-only layers carry none.
+- Sparse layers (battery, board, silicon, thermal, coil) ride
+  translucent carrier quads at their slots so all ten read as strata.
+- Camera stands ~14° above the phone plane (Prompt D 3.1), not the old
+  42° overhead dive: stack 68.5mm vs plate ~100mm (ratio ~0.68; the
+  > 0.80 bar contradicts the protected 8.5mm gap, ceiling ~0.70).
+- Framing fits the separated stack volume (projected extents grow with
+  stackSeparate), not one plate; narrow viewports keep per-layer macro
+  floors as backstop. Over-zoom vs stack ≤ 0.64 on 0.5/1.0/2.0 aspects.
 - Internals share materials across layers, so per-part recede is not
   possible without cloning the set per layer (rejected: 10× material
   memory for a dimming effect). Context pop there comes from position,
@@ -28,6 +48,9 @@ After: `docs/film-snaps/act-teardown-*.png` (stack + ten layers).
   lift, battery beats); teardown overrides positioning while stacked.
 - Stage brightens continuously across the run; page tint + text scrim
   follow stage lightness (contrast tested at 24 points, accents included).
+- Both layer drivers (director shell groups, Internals parts) call one
+  shared `applyLayerTransform` helper; module nesting and screw spin stay
+  at the call sites.
 
 ## Rubric (12 checks)
 

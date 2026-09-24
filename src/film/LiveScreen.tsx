@@ -8,6 +8,8 @@ interface LiveScreenProps {
   modeRef: { current: ScreenMode }
   brightnessRef: { current: number }
   runningRef: { current: boolean }
+  /** Film time: master progress written by the director every frame. */
+  timeRef: { current: number }
 }
 
 function paint(
@@ -91,8 +93,18 @@ function paint(
 /**
  * Live display painter. Redraws at roughly 9fps into the shared texture,
  * pauses when the document hides or the stage leaves the viewport.
+ * Animation phase comes from film time, not the wall clock (round 03
+ * A11): the same progress paints the same pixels, so captures are
+ * deterministic and reverse scrub retraces exactly. (The os minute
+ * readout still shows real time.)
  */
-export function LiveScreen({ texture, modeRef, brightnessRef, runningRef }: LiveScreenProps) {
+export function LiveScreen({
+  texture,
+  modeRef,
+  brightnessRef,
+  runningRef,
+  timeRef,
+}: LiveScreenProps) {
   const tick = useMemo(() => ({ acc: 0 }), [])
   useEffect(() => {
     let frame = 0
@@ -109,12 +121,12 @@ export function LiveScreen({ texture, modeRef, brightnessRef, runningRef }: Live
       last = now
       if (tick.acc < 0.11) return
       tick.acc = 0
-      paint(ctx, modeRef.current, now / 1000, brightnessRef.current)
+      paint(ctx, modeRef.current, timeRef.current * Math.PI * 2, brightnessRef.current)
       texture.needsUpdate = true
     }
     frame = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frame)
-  }, [texture, modeRef, brightnessRef, runningRef, tick])
+  }, [texture, modeRef, brightnessRef, runningRef, timeRef, tick])
   return null
 }
 
@@ -122,9 +134,11 @@ export function useScreenRefs(): {
   modeRef: { current: ScreenMode }
   brightnessRef: { current: number }
   runningRef: { current: boolean }
+  timeRef: { current: number }
 } {
   const modeRef = useRef<ScreenMode>('wallpaper')
   const brightnessRef = useRef(0.6)
   const runningRef = useRef(true)
-  return { modeRef, brightnessRef, runningRef }
+  const timeRef = useRef(0)
+  return { modeRef, brightnessRef, runningRef, timeRef }
 }

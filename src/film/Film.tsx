@@ -45,13 +45,26 @@ export function Film() {
   // Reduced motion gets the static story, not a snapped film: a
   // scroll-driven film is a barrier for some people and a nausea trigger
   // for others (meta prompt section 6.9). Same fallback as no-WebGL.
-  const [reducedMotion] = useState(() => {
+  // Subscribed (round 03 Part H): a mid-session OS toggle swaps the tree
+  // instead of stranding the film in a half-reduced state.
+  const [reducedMotion, setReducedMotion] = useState(() => {
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches
     } catch {
       return false
     }
   })
+  useEffect(() => {
+    let mq: MediaQueryList | null = null
+    try {
+      mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    } catch {
+      return
+    }
+    const onChange = (event: MediaQueryListEvent): void => setReducedMotion(event.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq?.removeEventListener('change', onChange)
+  }, [])
   const [contextLost, setContextLost] = useState(false)
   const showFallback = !canRender || contextLost || reducedMotion
 

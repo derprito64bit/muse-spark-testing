@@ -58,9 +58,9 @@ export const LENS_RING_R = 0.0102
  * coatHue drives per-lens AR coating tint in radians.
  */
 export const LENSES = [
-  { key: 'main', angleDeg: 90, r: 0.006, barrelDepth: 0.0016, elementZ: -0.0009, coatHue: 2.1 },
-  { key: 'ultra', angleDeg: 210, r: 0.0049, barrelDepth: 0.001, elementZ: -0.0005, coatHue: 4.6 },
-  { key: 'mid', angleDeg: 330, r: 0.0049, barrelDepth: 0.0021, elementZ: -0.0013, coatHue: 0.3 },
+  { key: 'main', angleDeg: 90, r: 0.006, barrelDepth: 0.0016, coatHue: 2.1 },
+  { key: 'ultra', angleDeg: 210, r: 0.0049, barrelDepth: 0.001, coatHue: 4.6 },
+  { key: 'mid', angleDeg: 330, r: 0.0049, barrelDepth: 0.0021, coatHue: 0.3 },
 ] as const
 /** Periscope window: a rounded rectangle, folded optic below the triangle. */
 export const PERISCOPE = {
@@ -154,12 +154,13 @@ export const PUNCH = { r: 0.0016, ring: 0.00015, y: 0.0728 } as const
 export const EARPIECE = { w: 0.012, h: 0.0006, y: 0.0772 } as const
 
 /**
- * Superellipse exponents. The exponent controls corner fullness: 2 is an
- * ellipse, 4 reads as a phone, 5.5 as a brick. Body 6.0: rectangular with
- * smoothed corners, the glass carried out to the rails. The camera module
+ * Body corner radius in meters (round 02, user call): the body is a
+ * rounded rectangle — straight rails with tangent circular-arc corners,
+ * iPhone silhouette — not a superellipse whose sides bow outward along
+ * their whole length. 11mm corners on the 76.8mm width. The camera module
  * is circular (Prompt A2), not a squircle.
  */
-export const BODY_N = 6.0
+export const CORNER_R = 0.011
 
 /**
  * Chamfer sizes in meters. Every visible edge gets one or it renders as a
@@ -175,12 +176,20 @@ export const CHAMFER = {
   body: 0.0009, // 0.90mm, frame body edge: rectangular, smoothed corners
 } as const
 
-/** Vertical silhouette height in meters for a scale and x-rotation. */
+/**
+ * Vertical silhouette height in meters for a scale and x-rotation.
+ * World-axis measure, valid only while the camera looks along world -Z
+ * (front-on acts); use projectedExtentM once the camera leaves that axis.
+ */
 export function silhouetteHeightM(scale: number, rxRad: number): number {
-  return scale * (DIM.h * Math.cos(rxRad) + DIM.t * Math.sin(rxRad))
+  return scale * (DIM.h * Math.abs(Math.cos(rxRad)) + DIM.t * Math.abs(Math.sin(rxRad)))
 }
 
-/** Horizontal silhouette width in meters for a scale and y-rotation. */
+/**
+ * Horizontal silhouette width in meters for a scale and y-rotation.
+ * World-axis measure, valid only while the camera looks along world -Z;
+ * use projectedExtentM once the camera leaves that axis.
+ */
 export function silhouetteWidthM(scale: number, ryRad: number): number {
   return scale * (Math.abs(DIM.w * Math.cos(ryRad)) + DIM.t * Math.abs(Math.sin(ryRad)))
 }

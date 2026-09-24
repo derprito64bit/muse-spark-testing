@@ -1,28 +1,18 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef, type MutableRefObject } from 'react'
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { INTERNALS_KEYS, type InternalsMaterialSet } from './internalsMaterials.ts'
 import { EXPLODE_DIRECTIONS, EXPLODE_PARTS, partProgress } from './explode.ts'
-import {
-  FLIP,
-  FEATURE_OFFSET,
-  PART_LAYER,
-  TEARDOWN_LAYERS,
-  featureFrame,
-  layerOffset,
-  weightDamp,
-  type FeatureFrame,
-} from '../teardown/layers.ts'
-import { calloutBridge } from '../overlay/callouts.ts'
+import { PART_LAYER, TEARDOWN_LAYERS, weightDamp, type FeatureFrame } from '../teardown/layers.ts'
+import { applyLayerTransform } from '../teardown/transform.ts'
+import { calloutBridge, featureAnchorBridge } from '../overlay/callouts.ts'
 import { BoardPart } from './parts/board.tsx'
+import { CARRIER_PLATES, CarrierPlates } from './parts/carriers.tsx'
 import { OpticsPart } from './parts/optics.tsx'
+import { featureCalloutPart } from '../chapters.ts'
 import { PowerPart } from './parts/power.tsx'
 import type { PartRegister } from './parts/register.ts'
 import { SiliconPart } from './parts/silicon.tsx'
-
-function clamp01(v: number): number {
-  return Math.min(1, Math.max(0, v))
-}
 
 /** Mutable per-frame control plane. Written by the director, read here. No React renders. */
 export interface InternalsControl {
@@ -79,6 +69,22 @@ export function Internals({ materials, control }: InternalsProps) {
     }
   }, [])
 
+  // Carrier substrate: one shared material, faded with the assembly.
+  // Plain color, no map slot, disposed with the component. Unlit basic
+  // material in a blue-graphite tint so the strata read even in the
+  // dark stage wash; opacity stays low enough to never plate over parts.
+  const carrierMaterial = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: '#232c3d',
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    [],
+  )
+  useEffect(() => () => carrierMaterial.dispose(), [carrierMaterial])
   useFrame((_, delta) => {
     const c = control.current
     for (const k of INTERNALS_KEYS) materials[k].opacity = c.opacity
@@ -102,23 +108,23 @@ export function Internals({ materials, control }: InternalsProps) {
       const layerIndex = PART_LAYER[part.id] ?? 5
       const layer = TEARDOWN_LAYERS[layerIndex]
       const weight = layer?.weight ?? 'medium'
-      if (teardown)
-        featureFrame(clamp01(c.layerCursor - layerIndex), weight, feat.current, c.reducedMotion)
-      const f = feat.current
-      const off = layerOffset(layerIndex, 10, c.teardownGap, sep)
       const damp = teardown && !c.reducedMotion ? 1 - Math.exp(-delta * weightDamp(weight)) : 1
       for (const g of targets) {
         g.visible = visible
         if (teardown) {
           // Layer slot plus the feature gesture; damped by weight class so
           // mass reads from motion alone. Goals converge, so rest is exact.
-          g.position.x += (FEATURE_OFFSET.x * f.detach - g.position.x) * damp
-          g.position.y += (FEATURE_OFFSET.y * f.detach - g.position.y) * damp
-          g.position.z += (off + FEATURE_OFFSET.z * f.detach - g.position.z) * damp
-          g.rotation.set(FLIP.x * f.turn, FLIP.y * f.turn, FLIP.z * f.turn)
-          const bump =
-            ((layer?.featureScale ?? 1) - 1) * f.scale * (c.teardownGap < 0.008 ? 0.85 : 1)
-          g.scale.setScalar(1 + bump)
+          // Shared helper with the director driver (round 03 A.6.4).
+          applyLayerTransform(
+            g,
+            layer ?? TEARDOWN_LAYERS[5]!,
+            c.layerCursor,
+            sep,
+            c.teardownGap,
+            damp,
+            c.reducedMotion,
+            feat.current,
+          )
           if (part.spin === true) g.rotation.z = wSpin * Math.PI * 2
         } else {
           g.position.set(dir.x * travel, dir.y * travel, dir.z * travel)
@@ -135,6 +141,38 @@ export function Internals({ materials, control }: InternalsProps) {
       }
     }
     if (!visible) return
+
+    // Carrier plates ride their layers exactly like parts; visible only
+    // while separated (inside the assembled phone they would just cost
+    // fill). Opacity follows the assembly dissolve.
+    carrierMaterial.opacity = 0.16 * c.opacity
+    for (const carrier of CARRIER_PLATES) {
+      const targets = groups.current[carrier.id]
+      if (targets === undefined) continue
+      const layer = TEARDOWN_LAYERS[carrier.layer]
+      if (layer === undefined) continue
+      const carrierDamp =
+        teardown && !c.reducedMotion ? 1 - Math.exp(-delta * weightDamp(layer.weight)) : 1
+      for (const g of targets) {
+        g.visible = visible && teardown
+        if (teardown) {
+          applyLayerTransform(
+            g,
+            layer,
+            c.layerCursor,
+            sep,
+            c.teardownGap,
+            carrierDamp,
+            c.reducedMotion,
+            feat.current,
+          )
+        } else {
+          g.position.set(0, 0, 0)
+          g.rotation.set(0, 0, 0)
+          g.scale.setScalar(1)
+        }
+      }
+    }
 
     // Shield lids lift on their own window after the outer layers clear.
     const lidW = Math.min(1, Math.max(0, c.shieldLift))
@@ -174,6 +212,22 @@ export function Internals({ materials, control }: InternalsProps) {
       1 + c.energy * 1 + c.battLift * 0.5 + (featured === 3 ? 1 : 0)
     // Coil status ring: charging indicator for the Clear finish.
     materials.coilRing.emissiveIntensity = 0.25 + c.coilRing * 2.4
+    // Featured-layer anchor for the HTML pointer (overnight fix): world
+    // position published from the driving closure, which is live by
+    // construction. getWorldPosition refreshes matrices itself.
+    const featPartId = featured >= 0 ? featureCalloutPart(featured) : null
+    const featGroup = featPartId !== null ? (groups.current[featPartId]?.[0] ?? null) : null
+    if (featGroup !== null) {
+      featGroup.getWorldPosition(scratch.current.dir)
+      featureAnchorBridge.x = scratch.current.dir.x
+      featureAnchorBridge.y = scratch.current.dir.y
+      featureAnchorBridge.z = scratch.current.dir.z
+      featureAnchorBridge.partId = featPartId
+      featureAnchorBridge.valid = true
+    } else {
+      featureAnchorBridge.partId = null
+      featureAnchorBridge.valid = false
+    }
   })
 
   return (
@@ -182,6 +236,7 @@ export function Internals({ materials, control }: InternalsProps) {
       <SiliconPart materials={materials} register={register} />
       <PowerPart materials={materials} register={register} />
       <OpticsPart materials={materials} register={register} />
+      <CarrierPlates register={register} material={carrierMaterial} />
     </group>
   )
 }

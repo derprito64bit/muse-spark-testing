@@ -17,6 +17,12 @@ export interface FitOptions {
   horizontalMargin?: number
   minFovDeg?: number
   maxFovDeg?: number
+  /**
+   * Precomputed image-plane extents (round 03 A.6.2). When present they
+   * replace the world-axis silhouette measures, which under-report
+   * whenever the camera leaves the front-on axis — up to 6x in teardown.
+   */
+  extents?: { horizontalM: number; verticalM: number }
 }
 
 /**
@@ -54,8 +60,8 @@ export function fitFov(options: FitOptions): number {
   const horizontalMargin =
     options.horizontalMargin ??
     Math.min(0.86, Math.max(0.78, 0.86 - Math.max(0, aspect - 1.9) * 0.05))
-  const eh = silhouetteHeightM(scale, rxRad)
-  const ew = silhouetteWidthM(scale, ryRad)
+  const eh = options.extents?.verticalM ?? silhouetteHeightM(scale, rxRad)
+  const ew = options.extents?.horizontalM ?? silhouetteWidthM(scale, ryRad)
   const offsetSpan = Math.abs(options.pxM ?? 0)
   const tanV = eh / (2 * distanceM * Math.max(formatFit(aspect, fit), 0.05))
   const tanH = (ew * 0.5 + offsetSpan) / (distanceM * Math.max(aspect, 0.3) * horizontalMargin)
@@ -91,6 +97,11 @@ const TEARDOWN_MACRO = { start: 0.39, end: 0.47 }
  * own half-height from the manifest (logic-board 0.069 sets the widest in
  * this span, silicon 0.0125 the tightest) instead of one die-sized floor
  * for layers with very different footprints.
+ *
+ * Division of labor with the fit solver (round 03 9e, measured): the fit
+ * now contains the whole separated stack, so these floors bind only in
+ * narrow corners (1 of 27 sampled aspect/progress points, thermal at 0.4
+ * aspect) — kept as the backstop for exactly those, not removed.
  */
 export function macroFloorFov(p: number, distanceM: number, aspect: number): number {
   let halfM = 0

@@ -258,3 +258,47 @@ export const CALLOUTS: CalloutDef[] = [
     priority: 3,
   },
 ]
+
+/**
+ * One pointer per featured teardown layer (overnight watchability): during
+ * each layer's hold a single leader names the part while the copy card
+ * tells its story. Shell-only layers (cover glass, display, rear panel)
+ * fill the frame and need no pointer; every other layer anchors to a
+ * registered part group that the callout loop already projects.
+ */
+export interface FeatureCallout {
+  partId: string
+  title: string
+  /** 0..1 leader opacity: fades in/out at the window edges. */
+  opacity: number
+}
+
+const FEATURE_CALLOUT_PART: Readonly<Record<number, { partId: string; title: string }>> = {
+  2: { partId: 'haptic', title: 'Haptic motor' },
+  3: { partId: 'cell', title: 'Silicon-carbon cell' },
+  4: { partId: 'nand', title: 'Logic board' },
+  5: { partId: 'die', title: CHIPSET.name },
+  6: { partId: 'vapor-chamber', title: 'Vapour chamber' },
+  7: { partId: 'charge-coil', title: 'Wireless coil' },
+  8: { partId: 'camera-module', title: 'Camera module' },
+}
+
+/** Representative part per featured layer, for the Internals publisher. */
+export function featureCalloutPart(index: number): string | null {
+  return FEATURE_CALLOUT_PART[index]?.partId ?? null
+}
+
+/**
+ * Featured-layer pointer for a continuous cursor. Pure function of
+ * progress: null outside feature windows and on shell-only layers.
+ */
+export function featuredCallout(cursor: number): FeatureCallout | null {
+  const index = Math.floor(cursor)
+  const def = FEATURE_CALLOUT_PART[index]
+  if (def === undefined) return null
+  const d = cursor - index
+  if (d < 0.15 || d > 0.95) return null
+  const entry = Math.min(1, Math.max(0, (d - 0.15) / 0.15))
+  const exit = Math.min(1, Math.max(0, (0.95 - d) / 0.15))
+  return { ...def, opacity: entry * exit }
+}

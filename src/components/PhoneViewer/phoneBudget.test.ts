@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import {
   BEZEL,
-  BODY_N,
   CHAMFER,
   COLLAR,
   DIM,
@@ -30,9 +29,10 @@ import {
   createFrameBodyGeometry,
   createFrameRingGeometry,
   createModuleBaseGeometry,
+  createPanelGapGeometry,
   createRoundedRectGeometry,
   createSlabGeometry,
-  superellipseSlabGeometry,
+  roundedRectSlabGeometry,
 } from './phoneGeometry.ts'
 
 /**
@@ -56,12 +56,12 @@ function box(w: number, h: number, d: number, instances = 1): number {
 function lensTris(r: number, barrelDepth: number, baffles: number): number {
   let total = 0
   total += tris(new THREE.CylinderGeometry(r + 0.0009, r + 0.0012, 0.0006, 40))
-  total += tris(new THREE.SphereGeometry(r, 40, 8, 0, Math.PI * 2, 0, 0.18))
+  total += tris(new THREE.SphereGeometry(r / Math.sin(0.12), 48, 8, 0, Math.PI * 2, 0, 0.12))
   total += tris(new THREE.CylinderGeometry(r * 0.86, r * 0.8, barrelDepth, 32, 1, true))
   for (let i = 0; i < baffles; i++) {
     total += tris(new THREE.TorusGeometry(r * 0.78, 0.00022, 8, 32))
   }
-  total += tris(new THREE.SphereGeometry(r * 0.6, 32, 8, 0, Math.PI * 2, 0, 1.1))
+  total += tris(new THREE.SphereGeometry(r * 1.5, 32, 8, 0, Math.PI * 2, 0, 0.5))
   total += tris(new THREE.RingGeometry(r * 0.3, r * 0.42, 7))
   total += tris(new THREE.CircleGeometry(r * 0.5, 24))
   total += tris(new THREE.RingGeometry(r + 0.0011, r + 0.0017, 40))
@@ -92,15 +92,9 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   add('frameRing', tris(createFrameRingGeometry(coarse)))
   const panelW = DIM.w - BEZEL * 2
   const panelH = DIM.h - BEZEL * 2
-  add(
-    'backSlab',
-    tris(superellipseSlabGeometry(0.03695, 0.07835, BODY_N, BACK_PANEL.depth, 0.0013)),
-  )
-  add('glassSlab', tris(superellipseSlabGeometry(0.0376, 0.079, BODY_N, FRONT_GLASS.depth, 0.0012)))
-  add(
-    'displaySlab',
-    tris(superellipseSlabGeometry(0.036, 0.0774, BODY_N, DISPLAY_PANEL.depth, 0.0001)),
-  )
+  add('backSlab', tris(roundedRectSlabGeometry(0.03695, 0.07835, BACK_PANEL.depth, 0.0013)))
+  add('glassSlab', tris(roundedRectSlabGeometry(0.0376, 0.079, FRONT_GLASS.depth, 0.0012)))
+  add('displaySlab', tris(roundedRectSlabGeometry(0.036, 0.0774, DISPLAY_PANEL.depth, 0.0001)))
   add('logo', tris(new THREE.PlaneGeometry(0.016, 0.004)))
   if (detail === 'high') {
     add('regulatory', tris(new THREE.PlaneGeometry(0.012, 0.0022)))
@@ -109,7 +103,7 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
       tris(new THREE.PlaneGeometry(panelW - DISPLAY_INSET * 2, panelH - DISPLAY_INSET * 2)),
     )
   }
-  add('panelGaps', box(DIM.w - 0.004, 0.00012, 0.0002, 2))
+  add('panelGaps', tris(createPanelGapGeometry(true)) + tris(createPanelGapGeometry(false)))
 
   // Circular module (Prompt A2): lathe base, two collar steps, seal,
   // instanced knurl, three lens tunnels, periscope, arc flash, ToF, mic,
@@ -195,7 +189,7 @@ function measure(detail: 'high' | 'low'): { total: number; rows: Array<[string, 
   add('cameraModule', module)
 
   // Bezel ink ring under the front glass.
-  add('bezel', tris(createBezelGeometry(0.0376, 0.079, 0.036, 0.0774, 5)))
+  add('bezel', tris(createBezelGeometry(0.0376, 0.079, 0.036, 0.0774)))
 
   // Panel split, worst case (Slate/Ember): seam groove plus proud lower panel.
   add(

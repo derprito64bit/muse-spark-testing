@@ -142,10 +142,11 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
       opticsSeparation,
       screenMode: screen.modeRef,
       screenBrightness: screen.brightnessRef,
+      screenTime: screen.timeRef,
       parallaxX,
       parallaxY,
     }),
-    [screen.modeRef, screen.brightnessRef, parallaxX, parallaxY],
+    [screen.modeRef, screen.brightnessRef, screen.timeRef, parallaxX, parallaxY],
   )
 
   return (
@@ -191,6 +192,7 @@ export function FilmScene({ progress, parallaxX, parallaxY, label }: FilmScenePr
         modeRef={screen.modeRef}
         brightnessRef={screen.brightnessRef}
         runningRef={screen.runningRef}
+        timeRef={screen.timeRef}
       />
       <AdaptiveDpr cap={1.75} />
       <CalloutBridge refs={refs} />

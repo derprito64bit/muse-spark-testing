@@ -34,6 +34,22 @@ export const calloutBridge: {
   canvasHeight: number
 } = { camera: null, anchors: {}, occluders: [], canvasWidth: 0, canvasHeight: 0 }
 
+/**
+ * Featured-layer anchor: world position published per frame by the
+ * Internals driver that positions the part (overnight pointer fix). The
+ * shared anchors map reads empty in dev (registration never lands), so
+ * the feature pointer does not depend on it — this bridge carries plain
+ * coordinates written from the driving closure, which is live by
+ * construction. Zero allocation: mutated in place, never replaced.
+ */
+export const featureAnchorBridge: {
+  x: number
+  y: number
+  z: number
+  partId: string | null
+  valid: boolean
+} = { x: 0, y: 0, z: 0, partId: null, valid: false }
+
 const scratch = new THREE.Vector3()
 
 /**

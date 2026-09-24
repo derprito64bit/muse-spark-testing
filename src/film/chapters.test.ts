@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BATTERY, CHIPSET, DISPLAY, MEMORY, PERFORMANCE, STORAGE_OPTIONS } from '../data/product.ts'
 import { formatNumber } from '../lib/format.ts'
-import { CHAPTERS } from './chapters.ts'
+import { CHAPTERS, featuredCallout } from './chapters.ts'
 import { ACTS } from './timeline.ts'
 
 /** The film overlay and the specifications page can never disagree. */
@@ -31,5 +31,21 @@ describe('chapter spec consistency', () => {
     for (const needle of required) {
       expect(text).toContain(needle)
     }
+  })
+
+  it('names one part per featured layer mid-window, nothing elsewhere', () => {
+    expect(featuredCallout(5.5)?.partId).toBe('die')
+    expect(featuredCallout(5.5)?.opacity).toBeCloseTo(1, 2)
+    expect(featuredCallout(3.4)?.partId).toBe('cell')
+    expect(featuredCallout(8.2)?.partId).toBe('camera-module')
+    // Shell-only layers and window edges carry no pointer.
+    expect(featuredCallout(0.5)).toBeNull()
+    expect(featuredCallout(1.2)).toBeNull()
+    expect(featuredCallout(9.5)).toBeNull()
+    expect(featuredCallout(5.02)).toBeNull()
+    expect(featuredCallout(5.99)).toBeNull()
+    const edge = featuredCallout(5.2)
+    expect(edge?.opacity ?? 0).toBeGreaterThan(0)
+    expect(edge?.opacity ?? 1).toBeLessThan(1)
   })
 })

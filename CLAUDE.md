@@ -158,6 +158,13 @@ Full list in `docs/context.md`. The ones that cost the most time:
   is silently ignored (D2).
 - **PowerShell:** no heredocs, no `||`, and `>` corrupts binaries as UTF-16. Never use the
   shell for file operations; use the file tools.
+- **Live module probes (round 03 Part 0).** The dev server serves native ESM: import
+  app modules directly in the browser console and measure, don't infer. Set
+  `scroll-behavior: auto` first (smooth swallows scripted jumps),
+  `window.__scene` is poisoned on multi-canvas pages (configurator owns it —
+  find the hero group by non-1 scale instead), `import('three')` fails (bare
+  specifier — import app modules), and never import with `?t=` cache-busters
+  (forks the HMR graph and poisons the tab with phantom errors).
 
 ---
 

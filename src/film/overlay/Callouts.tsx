@@ -2,12 +2,21 @@ import { useEffect, useRef } from 'react'
 import type { MotionValue } from 'motion/react'
 import * as THREE from 'three'
 import { EXPLODE_PARTS, partProgress } from '../internals/explode.ts'
-import { CALLOUTS } from '../chapters.ts'
+import { CALLOUTS, featuredCallout } from '../chapters.ts'
 import { computeFilmStates } from '../states.ts'
 import { cursorAt } from '../teardown/layers.ts'
-import { calloutBridge, layoutCallouts, type CalloutLayout } from './callouts.ts'
+import {
+  calloutBridge,
+  featureAnchorBridge,
+  layoutCallouts,
+  type CalloutLayout,
+} from './callouts.ts'
 
 const ENTRY_TRAVEL = 14
+const FEATURE_TRAVEL = 10
+
+/** Singleton world map for the one feature pointer: zero allocation. */
+const featureWorlds = new Map<string, THREE.Vector3>()
 
 /**
  * Exploded-diagram callouts (Prompt B section 6). One SVG leader layer,
@@ -20,6 +29,8 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const labelRefs = useRef<Array<HTMLDivElement | null>>([])
   const pathRefs = useRef<Array<SVGPathElement | null>>([])
+  const featureLabelRef = useRef<HTMLDivElement | null>(null)
+  const featurePathRef = useRef<SVGPathElement | null>(null)
   const scratch = useRef({
     world: new THREE.Vector3(),
     dir: new THREE.Vector3(),
@@ -28,6 +39,7 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
   const rect = useRef({ w: 0, h: 0 })
   const widths = useRef<number[]>([])
   const pool = useRef<THREE.Vector3[]>([])
+  const featureVec = useRef(new THREE.Vector3())
 
   useEffect(() => {
     let raf = 0
@@ -55,20 +67,21 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
       const p = progress.get()
       const st = computeFilmStates(p)
       // During the teardown feature run the layer copy carries the story,
-      // so callouts only bracket it: establishing stack and restack. Nine
+      // so the pool only brackets it: establishing stack and restack. Nine
       // simultaneous labels over a featured layer is clutter, not diagram.
+      // The featured layer gets exactly one pointer of its own below.
       const cursor = cursorAt(p)
       const inFeatureRun = p >= 0.25 && p < 0.52 && cursor > 0.5 && cursor < 9.5
-      const active =
+      const poolActive =
         st.calloutOpacity > 0.01 &&
         !inFeatureRun &&
         calloutBridge.camera !== null &&
         rect.current.w > 0
-      layer.style.display = active ? 'block' : 'none'
-      if (!active) return
-
+      const feature = inFeatureRun ? featuredCallout(cursor) : null
       const camera = calloutBridge.camera
-      if (camera === null) return
+      const layerVisible = (poolActive || feature !== null) && camera !== null && rect.current.w > 0
+      layer.style.display = layerVisible ? 'block' : 'none'
+      if (!layerVisible || camera === null) return
       const { w, h } = rect.current
       if (pool.current.length !== CALLOUTS.length) {
         pool.current = CALLOUTS.map(() => new THREE.Vector3())
@@ -118,7 +131,11 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
         const layout = byId.get(def.partId)
         const part = EXPLODE_PARTS.find((entry) => entry.id === def.partId)
         const entry = part === undefined ? 1 : partProgress(st.explodeXray, part.delay)
-        const show = (layout?.visible ?? false) && !occluded.has(def.partId) && entry > 0.35
+        // Pool labels render only outside the feature run: the layer owns
+        // this container's visibility while featured, but that must not
+        // leak the pool back on (overnight pointer fix).
+        const show =
+          poolActive && (layout?.visible ?? false) && !occluded.has(def.partId) && entry > 0.35
         const opacity = show
           ? st.calloutOpacity * (reduced ? 1 : Math.min(1, (entry - 0.35) / 0.3))
           : 0
@@ -142,6 +159,65 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
         )
         path.style.opacity = String(opacity)
       })
+      // Featured-layer pointer: exactly one leader naming the part while
+      // the copy card tells its story (overnight watchability). Reuses the
+      // projection + occlusion machinery; shell-only layers carry no
+      // pointer (their plate fills the frame).
+      const featureLabel = featureLabelRef.current
+      const featurePath = featurePathRef.current
+      if (featureLabel !== null && featurePath !== null) {
+        // Anchor comes from the dedicated bridge (plain coordinates the
+        // driving closure publishes), not the shared anchors map.
+        const anchored =
+          feature !== null &&
+          featureAnchorBridge.valid &&
+          featureAnchorBridge.partId === feature.partId
+        featureWorlds.clear()
+        if (anchored) {
+          featureVec.current.set(
+            featureAnchorBridge.x,
+            featureAnchorBridge.y,
+            featureAnchorBridge.z,
+          )
+          featureWorlds.set(feature.partId, featureVec.current)
+        }
+        const layout =
+          feature !== null
+            ? layoutCallouts(
+                [{ partId: feature.partId, title: feature.title, body: '', priority: 1 }],
+                featureWorlds,
+                camera,
+                w,
+                h,
+              )[0]
+            : undefined
+        const show = anchored && layout?.visible === true && !occluded.has(feature.partId)
+        featureLabel.style.opacity = String(show && feature !== null ? feature.opacity : 0)
+        if (!show || feature === null || layout === undefined) {
+          featurePath.setAttribute('d', '')
+        } else {
+          if (featureLabel.dataset.part !== feature.partId) {
+            featureLabel.dataset.part = feature.partId
+            const title = featureLabel.querySelector('p')
+            if (title !== null) title.textContent = feature.title
+            // Fresh copy needs a fresh measure (one sync layout per layer).
+            featureLabel.dataset.w = String(featureLabel.offsetWidth)
+          }
+          const lx = layout.x
+          const ly = layout.y
+          const side = layout.side
+          const travel = reduced ? 0 : FEATURE_TRAVEL * (1 - feature.opacity)
+          const cachedWidth = Number(featureLabel.dataset.w ?? 0)
+          const labelX = side === 'right' ? lx + 18 + travel : lx - 18 - travel - cachedWidth
+          featureLabel.style.transform = `translate(${labelX.toFixed(1)}px, ${(ly - 14).toFixed(1)}px)`
+          const anchorX = side === 'right' ? labelX : labelX + cachedWidth
+          featurePath.setAttribute(
+            'd',
+            `M ${lx.toFixed(1)} ${ly.toFixed(1)} L ${anchorX.toFixed(1)} ${(ly - 8).toFixed(1)}`,
+          )
+          featurePath.style.opacity = String(feature.opacity)
+        }
+      }
     }
     raf = requestAnimationFrame(tick)
     return () => {
@@ -165,6 +241,15 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
             fill="none"
           />
         ))}
+        <path
+          ref={(el) => {
+            featurePathRef.current = el
+          }}
+          stroke="currentColor"
+          className="text-(--color-ink)"
+          strokeWidth={1}
+          fill="none"
+        />
       </svg>
       {CALLOUTS.map((def, i) => (
         <div
@@ -179,6 +264,15 @@ export function Callouts({ progress }: { progress: MotionValue<number> }) {
           <p className="spec-tech text-(--color-dim)">{def.body}</p>
         </div>
       ))}
+      <div
+        ref={(el) => {
+          featureLabelRef.current = el
+        }}
+        className="absolute left-0 top-0 max-w-44"
+        data-testid="callout-featured"
+      >
+        <p className="spec-tech text-(--color-ink)">Featured part</p>
+      </div>
     </div>
   )
 }

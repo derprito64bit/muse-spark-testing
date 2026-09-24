@@ -17,11 +17,11 @@ import {
 } from './phoneDimensions.ts'
 import {
   assignRailGroups,
-  bodyExponent,
   createBezelGeometry,
   createFrameBodyGeometry,
   createFrameRingGeometry,
-  superellipseSlabGeometry,
+  createPanelGapGeometry,
+  roundedRectSlabGeometry,
 } from './phoneGeometry.ts'
 import {
   FINISH_COLORS,
@@ -125,27 +125,25 @@ function PhoneModelInner({
     return geometry
   }, [detail])
   const backSlabGeometry = useMemo(
-    () => superellipseSlabGeometry(0.03695, 0.07835, bodyExponent(), BACK_PANEL.depth, 0.0013),
+    () => roundedRectSlabGeometry(0.03695, 0.07835, BACK_PANEL.depth, 0.0013),
     [],
   )
   const glassSlabGeometry = useMemo(
     // Corner radius matches the frame-ring opening (0.0012): matched
     // corners, no slivers or overlaps at the glass meet.
-    () =>
-      superellipseSlabGeometry(0.0376, 0.079, bodyExponent(), FRONT_GLASS.depth, CHAMFER.glassMeet),
+    () => roundedRectSlabGeometry(0.0376, 0.079, FRONT_GLASS.depth, CHAMFER.glassMeet),
     [],
   )
   const displaySlabGeometry = useMemo(
-    () => superellipseSlabGeometry(0.036, 0.0774, bodyExponent(), DISPLAY_PANEL.depth, 0.0001),
+    () => roundedRectSlabGeometry(0.036, 0.0774, DISPLAY_PANEL.depth, 0.0001),
     [],
   )
   // Bezel ink ring: glass footprint outside, active area inside, feathered
-  // edge. Corner loops share the body exponent so the ink band is uniform.
+  // edge. Corner loops share the body radius so the ink band is uniform.
   // Renders under the glass slab so the specular passes over unbroken.
-  const bezelGeometry = useMemo(
-    () => createBezelGeometry(0.0376, 0.079, 0.036, 0.0774, bodyExponent()),
-    [],
-  )
+  const bezelGeometry = useMemo(() => createBezelGeometry(0.0376, 0.079, 0.036, 0.0774), [])
+  const panelGapTopGeometry = useMemo(() => createPanelGapGeometry(true), [])
+  const panelGapBottomGeometry = useMemo(() => createPanelGapGeometry(false), [])
   const lensRefs = useRef<Partial<Record<FocusLensId, THREE.Group>>>({})
   const focusRef = useRef<{ key: FocusLensId | null; blend: number }>({ key: focusLens, blend: 0 })
   // Rail materials in group order (+X, -X, +Y, -Y) for the split extrusion.
@@ -273,13 +271,13 @@ function PhoneModelInner({
             <primitive object={set.regulatory} attach="material" />
           </mesh>
         ) : null}
-        {/* 0.12mm frame-to-back gap: recessed dark hairlines top and bottom */}
-        <mesh position={[0, SY - 0.0006, BACK_FACE + 0.0002]}>
-          <boxGeometry args={[DIM.w - 0.004, 0.00012, 0.0002]} />
+        {/* 0.12mm frame-to-back gap: recessed dark hairlines top and bottom,
+            following the edge rail to rail so the ends never poke past the
+            rounded corners. */}
+        <mesh geometry={panelGapTopGeometry} position={[0, 0, BACK_FACE + 0.0002]}>
           <primitive object={set.antenna} attach="material" />
         </mesh>
-        <mesh position={[0, -SY + 0.0006, BACK_FACE + 0.0002]}>
-          <boxGeometry args={[DIM.w - 0.004, 0.00012, 0.0002]} />
+        <mesh geometry={panelGapBottomGeometry} position={[0, 0, BACK_FACE + 0.0002]}>
           <primitive object={set.antenna} attach="material" />
         </mesh>
       </group>

@@ -30,7 +30,6 @@ export interface LensSpec {
   r: number
   coatHue: number
   barrelDepth: number
-  elementZ: number
   glass: keyof Pick<PhoneMaterialSet, 'lensGlassA' | 'lensGlassB' | 'lensGlassC'>
 }
 
@@ -63,7 +62,6 @@ export function lensSpecs(): LensSpec[] {
       r: lens.r,
       coatHue: lens.coatHue,
       barrelDepth: lens.barrelDepth,
-      elementZ: lens.elementZ,
       glass: GLASS_FOR[lens.key],
     }
   })
@@ -429,10 +427,10 @@ function PeriscopeAssembly({
 
 /**
  * One parametric optical assembly built outward from the module face (z0,
- * decreasing z is outward). Cover dome, collar, depth-ramped barrel, two
- * baffles at 35/70 percent of barrel depth, front element at elementZ,
- * aperture hint, sensor plane: the receding-ring tunnel. Called three
- * times, never modelled twice.
+ * decreasing z is outward). Full-mouth sapphire cover, collar,
+ * depth-ramped barrel, two baffles at 35/70 percent of barrel depth, front
+ * element doming toward the viewer at 45% barrel depth, aperture hint,
+ * sensor plane. Called three times, never modelled twice.
  */
 function LensAssembly({
   spec,
@@ -452,6 +450,12 @@ function LensAssembly({
   const glass = materials[spec.glass]
   const z0 = faceZ
   const mouth = z0 + 0.0001
+  // Shallow sapphire cover spanning the full mouth (round 02 lens-flat
+  // fix): the old dome (base 0.18r) was a bump in an open well, so each
+  // mouth read as a hollow dark band instead of flat glass. Base radius
+  // exactly spec.r at the collar-top plane, gentle 0.12-rad bulge.
+  const coverR = spec.r / Math.sin(0.12)
+  const coverBaseZ = z0 - 0.00035
   return (
     <group
       position={[spec.x, spec.y, 0]}
@@ -466,10 +470,10 @@ function LensAssembly({
           <primitive object={materials.lensRing} attach="material" />
         </mesh>
       </group>
-      {/* Cover dome at the collar top: highlight slides, never pops */}
+      {/* Cover dome spanning the collar mouth: highlight slides, never pops */}
       <group ref={sep(`${spec.key}:cover`)}>
-        <mesh position={[0, 0, z0 - 0.00035]} rotation={[-Math.PI / 2, 0, 0]}>
-          <sphereGeometry args={[spec.r, 40, 8, 0, Math.PI * 2, 0, 0.18]} />
+        <mesh position={[0, 0, coverBaseZ + coverR]} rotation={[-Math.PI / 2, 0, 0]}>
+          <sphereGeometry args={[coverR, 48, 8, 0, Math.PI * 2, 0, 0.12]} />
           <primitive object={glass} attach="material" />
         </mesh>
       </group>
@@ -487,10 +491,16 @@ function LensAssembly({
           </mesh>
         ))}
       </group>
-      {/* Front element at its per-lens depth */}
+      {/* Front element at its per-lens depth: shallow cap doming toward
+          the viewer (round 02 lens-flat fix). The old cap domed inward and
+          sat behind the sensor plane, backface-culled and invisible, which
+          left every mouth a hollow well. Pole rides at 45% barrel depth. */}
       <group ref={sep(`${spec.key}:element`)}>
-        <mesh position={[0, 0, mouth - spec.elementZ]} rotation={[Math.PI / 2, 0, 0]}>
-          <sphereGeometry args={[spec.r * 0.6, 32, 8, 0, Math.PI * 2, 0, 1.1]} />
+        <mesh
+          position={[0, 0, mouth + spec.barrelDepth * 0.45 + spec.r * 1.5]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <sphereGeometry args={[spec.r * 1.5, 32, 8, 0, Math.PI * 2, 0, 0.5]} />
           <primitive object={glass} attach="material" />
         </mesh>
       </group>

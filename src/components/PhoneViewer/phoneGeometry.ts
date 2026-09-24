@@ -1,45 +1,41 @@
 import * as THREE from 'three'
-import { superellipsePoints } from '../../lib/superellipse.ts'
+import { roundedRectPoints } from '../../lib/rounded-rect.ts'
 import {
   BEZEL,
   BEZEL_SURFACE,
-  BODY_N,
+  CORNER_R,
   CHAMFER,
   DIM,
   RING_BASE_Z,
   RING_DEPTH,
 } from './phoneDimensions.ts'
 
-let bodyNOverride: number | null = null
-
 /**
- * Body superellipse exponent, tunable by eye via `?bodyN=` (Prompt A
- * section 3: tune, then freeze). Frozen at BODY_N = 6.0; the query param
- * exists only for the tuning session, clamped to the sane range.
+ * Body outline loop: rounded rect with the frozen corner radius, sampled
+ * by polar angle (+X start, monotone CCW, 4 * perQuadrant points). The old
+ * superellipse family is retired (round 02): its ever-curving sides bowed
+ * outward along their whole length and read as a pebble, not a phone.
+ * Inner holes inset the corner radius by the ledge so the band stays a
+ * uniform width through the corners.
  */
-export function bodyExponent(): number {
-  if (bodyNOverride === null) {
-    let parsed = Number.NaN
-    try {
-      const raw = new URLSearchParams(window.location.search).get('bodyN')
-      parsed = raw === null ? Number.NaN : Number.parseFloat(raw)
-    } catch {
-      parsed = Number.NaN
-    }
-    bodyNOverride = Number.isFinite(parsed) ? Math.min(6, Math.max(2, parsed)) : BODY_N
-  }
-  return bodyNOverride
-}
-
-/** Builds a closed THREE.Shape from a superellipse outline. */
-export function superellipseShape(
+export function bodyOutlinePoints(
   halfW: number,
   halfH: number,
-  n: number,
-  perQuadrant = 48,
+  cornerR: number,
+  perQuadrant: number,
+): Array<[number, number]> {
+  return roundedRectPoints(halfW, halfH, cornerR, perQuadrant)
+}
+
+/** Builds a closed THREE.Shape from a rounded-rect body outline. */
+export function bodyOutlineShape(
+  halfW: number,
+  halfH: number,
+  cornerR: number,
+  perQuadrant = 64,
 ): THREE.Shape {
   const shape = new THREE.Shape()
-  const pts = superellipsePoints(halfW, halfH, n, perQuadrant)
+  const pts = bodyOutlinePoints(halfW, halfH, cornerR, perQuadrant)
   const first = pts[0]
   if (first === undefined) return shape
   shape.moveTo(first[0], first[1])
@@ -78,6 +74,56 @@ export function roundedRectPath(
 }
 
 /**
+ * Frame-to-back panel gap: a recessed dark hairline following the top (or
+ * bottom) edge rail to rail, corners included. A straight box of phone
+ * width pokes 5mm past each rounded corner (round 02 poke-out fix), so the
+ * strip is built from the body outline itself: the top band of loop
+ * points, ribboned inward. Flat, facing -Z (the back viewer).
+ */
+export function createPanelGapGeometry(top: boolean): THREE.BufferGeometry {
+  const sign = top ? 1 : -1
+  const loop = bodyOutlinePoints(DIM.w / 2, DIM.h / 2, CORNER_R, 64)
+  const band = loop.filter(([, y]) => sign * y > DIM.h / 2 - 0.004)
+  const width = 0.00012
+  const positions: number[] = []
+  const normals: number[] = []
+  const uvs: number[] = []
+  const m = band.length
+  for (let i = 0; i < m; i++) {
+    const a = band[i] as [number, number]
+    const b = band[(i + 1) % m] as [number, number]
+    // Inward = toward centroid (origin), in plane.
+    const inA = inward(a)
+    const inB = inward(b)
+    quad(a, inA, inB, b)
+  }
+  function inward(p: [number, number]): [number, number] {
+    const len = Math.hypot(p[0], p[1]) || 1
+    return [p[0] - (p[0] / len) * width, p[1] - (p[1] / len) * width]
+  }
+  function quad(
+    p0: [number, number],
+    p1: [number, number],
+    p2: [number, number],
+    p3: [number, number],
+  ): void {
+    // Wound for a -Z normal (back viewer).
+    const z = 0
+    const tris: Array<[number, number]> = [p0, p2, p3, p0, p1, p2]
+    for (const [x, y] of tris) {
+      positions.push(x, y, z)
+      normals.push(0, 0, -1)
+      uvs.push(x, y)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  return geometry
+}
+
+/**
  * Perimeter bezel ring with a display opening, built as an explicit annulus:
  * front lid strip, outer wall, outer chamfer band, and inner hole walls.
  * A holed ExtrudeGeometry is not used because earcut drops dense holes
@@ -90,16 +136,16 @@ export function roundedRectPath(
 export function createFrameRingGeometry(coarse = false): THREE.BufferGeometry {
   const perQuadrant = coarse ? 32 : 64
   const total = perQuadrant * 4
-  const outer = superellipsePoints(DIM.w / 2, DIM.h / 2, bodyExponent(), perQuadrant)
-  // Display opening as a superellipse, not a rounded rect: a rounded-rect
-  // hole cuts deep at the corners while the n=5 body stays full, leaving a
-  // wide uneven ledge. Same exponent family as the body keeps the lid strip
-  // a uniform width all the way around. Phase-compatible by construction
+  const outer = bodyOutlinePoints(DIM.w / 2, DIM.h / 2, CORNER_R, perQuadrant)
+  // Display opening as an inset rounded rect, not a rounded rect of fixed
+  // radius: insetting the corner radius by the ledge keeps the lid strip a
+  // uniform width all the way around. Phase-compatible by construction
   // (+X start, monotone CCW), so the annulus never pinwheels.
-  const inner = superellipsePoints(
-    DIM.w / 2 - BEZEL * 0.95,
-    DIM.h / 2 - BEZEL * 0.95,
-    bodyExponent(),
+  const ledge = BEZEL * 0.95
+  const inner = bodyOutlinePoints(
+    DIM.w / 2 - ledge,
+    DIM.h / 2 - ledge,
+    Math.max(0.0005, CORNER_R - ledge),
     perQuadrant,
   )
   const zBack = RING_BASE_Z
@@ -233,21 +279,21 @@ export function createModuleBaseGeometry(
 }
 
 /**
- * Display bezel ink ring: superellipse outline with a superellipse opening
+ * Display bezel ink ring: rounded-rect outline with a rounded-rect opening
  * for the active area, feathered by the grain map's alpha falloff. Sits
  * under the front glass (BEZEL_SURFACE.z) so the glass reflection passes
- * over it unbroken. Both loops share the body exponent family so the ink
- * band is a uniform width, corners included.
+ * over it unbroken. The opening insets the corner radius by the band so
+ * the ink band is a uniform width, corners included.
  */
 export function createBezelGeometry(
   outerHW: number,
   outerHH: number,
   innerHW: number,
   innerHH: number,
-  n = 5,
 ): THREE.BufferGeometry {
-  const shape = superellipseShape(outerHW, outerHH, n, 64)
-  const holePts = superellipsePoints(innerHW, innerHH, n, 64)
+  const band = Math.max(0.0005, Math.min(outerHW - innerHW, outerHH - innerHH))
+  const shape = bodyOutlineShape(outerHW, outerHH, CORNER_R, 64)
+  const holePts = bodyOutlinePoints(innerHW, innerHH, CORNER_R - band, 64)
   const hole = new THREE.Path()
   const first = holePts[0]
   if (first !== undefined) {
@@ -265,19 +311,17 @@ export function createBezelGeometry(
 }
 
 /**
- * Centered superellipse slab with soft bevels. Front glass, display, and
- * back panel share the body exponent family: the glass extends out to meet
- * the rail overhang with a slight uniform gap instead of cutting deep at
- * the corners like a rounded rect would.
+ * Centered rounded-rect slab with soft bevels. Front glass, display, and
+ * back panel share the body outline: the glass extends out to meet the
+ * rail overhang with a slight uniform gap, corners included.
  */
-export function superellipseSlabGeometry(
+export function roundedRectSlabGeometry(
   halfW: number,
   halfH: number,
-  n: number,
   depth: number,
   bevel: number,
 ): THREE.BufferGeometry {
-  const shape = superellipseShape(halfW, halfH, n, 64)
+  const shape = bodyOutlineShape(halfW, halfH, CORNER_R, 64)
   const body = Math.max(0.0001, depth - bevel * 2)
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: body,
@@ -292,16 +336,16 @@ export function superellipseSlabGeometry(
   return geometry
 }
 
-/** Chamfered solid frame body: superellipse spine with beveled rims. */
+/** Chamfered solid frame body: rounded-rect spine with beveled rims. */
 export function createFrameBodyGeometry(backFaceZ: number, coarse = false): THREE.BufferGeometry {
   // Tile exactly: rear face at backFaceZ, top face flush with the ring base
   // so no groove reads edge-on. Depth derives from the planes, not a const.
   const bevelSize = CHAMFER.body
   const bevelThickness = 0.0006
-  const shape = superellipseShape(
+  const shape = bodyOutlineShape(
     DIM.w / 2 - bevelSize,
     DIM.h / 2 - bevelSize,
-    bodyExponent(),
+    Math.max(0.0005, CORNER_R - bevelSize),
     coarse ? 32 : 64,
   )
   const geometry = new THREE.ExtrudeGeometry(shape, {

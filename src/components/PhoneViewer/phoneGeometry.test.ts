@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import {
   assignRailGroups,
+  bodyOutlineShape,
   createFrameBodyGeometry,
   createFrameRingGeometry,
-  superellipseShape,
+  createPanelGapGeometry,
 } from './phoneGeometry.ts'
-import { BACK_FACE } from './phoneDimensions.ts'
+import { BACK_FACE, CORNER_R, DIM } from './phoneDimensions.ts'
 
 function groupSizes(geometry: THREE.BufferGeometry): number[] {
   return geometry.groups.map((group) => group.count)
@@ -56,8 +57,33 @@ describe('assignRailGroups', () => {
     geometry.dispose()
   })
 
-  it('builds a closed superellipse shape', () => {
-    const shape = superellipseShape(0.03, 0.05, 4, 16)
+  it('builds a closed rounded-rect body shape', () => {
+    const shape = bodyOutlineShape(0.03, 0.05, CORNER_R, 16)
     expect(shape.getPoints().length).toBeGreaterThan(0)
+    const pts = shape.getPoints()
+    let maxX = 0
+    for (const p of pts) maxX = Math.max(maxX, Math.abs(p.x))
+    // Straight rails: the outline touches halfW along a span, not a point.
+    expect(maxX).toBeCloseTo(0.03, 6)
+  })
+
+  it('keeps the panel gap hairlines inside the body outline (no poke-out)', () => {
+    // A straight full-width box pokes ~5mm past each rounded corner.
+    // The ribbon follows the edge, so every vertex stays in-bounds.
+    for (const top of [true, false]) {
+      const geometry = createPanelGapGeometry(top)
+      const pos = geometry.getAttribute('position') as THREE.BufferAttribute
+      expect(pos.count).toBeGreaterThan(0)
+      const nrm = geometry.getAttribute('normal') as THREE.BufferAttribute
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i)
+        const y = pos.getY(i)
+        // 1e-6 still catches any real poke-out (the boxes stuck out 5mm).
+        expect(Math.abs(x)).toBeLessThanOrEqual(DIM.w / 2 + 1e-6)
+        expect(Math.abs(y)).toBeLessThanOrEqual(DIM.h / 2 + 1e-6)
+        expect(nrm.getZ(i)).toBe(-1)
+      }
+      geometry.dispose()
+    }
   })
 })

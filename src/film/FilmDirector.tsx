@@ -10,18 +10,18 @@ import type { ScreenMode } from './LiveScreen.tsx'
 import { computeFilmStates, layerWindow } from './states.ts'
 import { actAt } from './timeline.ts'
 import {
-  FEATURE_OFFSET,
-  FLIP,
   LAYER_GAP,
   LAYER_GAP_COMPACT,
   TEARDOWN_LAYERS,
-  featureFrame,
   layerOffset,
   weightDamp,
   type FeatureFrame,
 } from './teardown/layers.ts'
+import { applyLayerTransform } from './teardown/transform.ts'
 import { sampleFilm } from './sample.ts'
 import { dollyZoomFov } from '../zoom/zoom.ts'
+import { projectedExtentM } from '../lib/projected-extent.ts'
+import { DIM } from '../components/PhoneViewer/phoneDimensions.ts'
 import type { PhoneMaterialSet } from '../components/PhoneViewer/phoneMaterials.ts'
 import type { InternalsControl } from './internals/Internals.tsx'
 
@@ -162,10 +162,6 @@ const RECEDE_MATS: Partial<Record<string, ReadonlyArray<keyof PhoneMaterialSet>>
   ],
 }
 
-function clamp01(v: number): number {
-  return Math.min(1, Math.max(0, v))
-}
-
 export interface FilmRefs {
   hero: MutableRefObject<THREE.Group | null>
   frame: MutableRefObject<THREE.Group | null>
@@ -182,6 +178,7 @@ export interface FilmRefs {
   opticsSeparation: MutableRefObject<Record<string, THREE.Group | null>>
   screenMode: { current: ScreenMode }
   screenBrightness: { current: number }
+  screenTime: { current: number }
   parallaxX: MotionValue<number>
   parallaxY: MotionValue<number>
 }
@@ -210,6 +207,9 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     accentTarget: new THREE.Color('#ffffff'),
     accentColor: new THREE.Color('#ffffff'),
     teardown: { detach: 0, turn: 0, scale: 0 } as FeatureFrame,
+    extents: { horizontalM: 0, verticalM: 0 },
+    extCam: [0, 0, 1] as [number, number, number],
+    extTgt: [0, 0, 0] as [number, number, number],
     prepared: false,
   })
 
@@ -307,6 +307,31 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     const distance = cam.position.distanceTo(s.look)
     let targetFov = t.fov
     if (t.fit !== null) {
+      // Size the fit to the separated stack, not one plate (round 03
+      // A.6.2): the box depth grows with stackSeparate, so framing opens
+      // as the layers lift and closes as they restack. Zero allocation:
+      // extents and tuples live in the frame scratch.
+      const stackGap = state.size.width < 900 ? LAYER_GAP_COMPACT : LAYER_GAP
+      s.extCam[0] = cam.position.x
+      s.extCam[1] = cam.position.y
+      s.extCam[2] = cam.position.z
+      s.extTgt[0] = s.look.x
+      s.extTgt[1] = s.look.y
+      s.extTgt[2] = s.look.z
+      projectedExtentM(
+        {
+          w: DIM.w,
+          h: DIM.h,
+          t: DIM.t + 9 * stackGap * st.stackSeparate,
+        },
+        t.scale,
+        t.rx,
+        t.ry,
+        t.rz,
+        s.extCam,
+        s.extTgt,
+        s.extents,
+      )
       const fitValue = fitFov({
         fit: t.fit,
         distanceM: distance,
@@ -316,6 +341,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
         ryRad: t.ry,
         pxM: t.px,
         maxFovDeg: t.fovMax,
+        extents: s.extents,
       })
       const w = Math.min(1, Math.max(0, t.fit))
       targetFov = Math.min(t.fovMax, t.fov + (fitValue - t.fov) * w)
@@ -398,6 +424,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
                 : 'wallpaper'
     refs.screenMode.current = mode
     refs.screenBrightness.current = act === 'display' ? 0.85 : 0.6
+    refs.screenTime.current = p
     const dim = 1 - st.shellGhost * 0.75
     materials.display.emissiveIntensity = st.screenOn * dim * (act === 'display' ? 1.35 : 0.95)
     // Macro atmosphere lifts the sensor shimmer at the holds. The featured
@@ -486,15 +513,13 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
 
     // Teardown layer driver (Prompt D sections 4-5): shell groups ride
     // their layer slots plus the four-phase feature gesture, damped by
-    // weight class. The module nests inside back, so its goal is relative
+    // weight class. One shared helper with the Internals driver (round 03
+    // A.6.4). The module nests inside back, so its goal is relative
     // to keep its world offset on its own layer.
     const teardownSep = st.stackSeparate
     if (teardownSep > 0.001) {
       const cursor = st.layerCursor
       for (const layer of TEARDOWN_LAYERS) {
-        featureFrame(clamp01(cursor - layer.index), layer.weight, s.teardown, reduced)
-        const f = s.teardown
-        const off = layerOffset(layer.index, 10, c.teardownGap, teardownSep)
         const damp = reduced ? 1 : 1 - Math.exp(-delta * weightDamp(layer.weight))
         for (const name of layer.shell) {
           const grp =
@@ -512,14 +537,18 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
             name === 'module'
               ? layerOffset(8, 10, c.teardownGap, teardownSep) -
                 layerOffset(9, 10, c.teardownGap, teardownSep)
-              : off
-          grp.position.x += (FEATURE_OFFSET.x * f.detach - grp.position.x) * damp
-          grp.position.y += (FEATURE_OFFSET.y * f.detach - grp.position.y) * damp
-          grp.position.z += (base + FEATURE_OFFSET.z * f.detach - grp.position.z) * damp
-          grp.rotation.set(FLIP.x * f.turn, FLIP.y * f.turn, FLIP.z * f.turn)
-          // Compact viewports shrink the hero bump so the layer never crops.
-          const bump = (layer.featureScale - 1) * f.scale * (c.teardownGap < 0.008 ? 0.85 : 1)
-          grp.scale.setScalar(1 + bump)
+              : undefined
+          applyLayerTransform(
+            grp,
+            layer,
+            cursor,
+            teardownSep,
+            c.teardownGap,
+            damp,
+            reduced,
+            s.teardown,
+            base,
+          )
         }
       }
       // Context recede over the ghost dissolve; featured keeps rest opacity.

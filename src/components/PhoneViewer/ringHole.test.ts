@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { superellipsePoints } from '../../lib/superellipse.ts'
-import { BEZEL, BODY_N, DIM } from './phoneDimensions.ts'
+import { roundedRectPoints } from '../../lib/rounded-rect.ts'
+import { BEZEL, CORNER_R, DIM } from './phoneDimensions.ts'
 import { createFrameRingGeometry } from './phoneGeometry.ts'
 import { assignRailGroups } from './phoneGeometry.ts'
 
@@ -32,10 +32,11 @@ describe('frame ring cutout', () => {
     // The annulus joins outer[i] to inner[i]. Both loops must start at
     // the +X axis and wind monotonically; a rotated start twists the lid
     // over the opening, where it z-fights with itself. The inner loop is
-    // a superellipse in the body exponent family so the lid strip stays a
-    // uniform width through the corners.
+    // an inset rounded rect so the lid strip stays a uniform width
+    // through the corners.
     const total = 256
-    const inner = superellipsePoints(DIM.w / 2 - BEZEL * 0.95, DIM.h / 2 - BEZEL * 0.95, BODY_N, 64)
+    const ledge = BEZEL * 0.95
+    const inner = roundedRectPoints(DIM.w / 2 - ledge, DIM.h / 2 - ledge, CORNER_R - ledge, 64)
     expect(inner).toHaveLength(total)
     const first = inner[0] as [number, number]
     expect(Math.atan2(first[1], first[0])).toBeCloseTo(0, 1)

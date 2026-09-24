@@ -42,6 +42,14 @@ test('reduced motion tells the teardown in stills (round 01 A7)', async ({ brows
   await context.close()
 })
 
+test('mid-session reduced-motion toggle swaps to stills (round 03 Part H)', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('film-runway')).toBeVisible()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.getByTestId('film-fallback')).toBeVisible()
+  await expect(page.getByText('Motion is reduced on this device')).toBeVisible()
+})
+
 test(
   'teardown copy tracks fast jumps, all ten layers (round 03 Part B)',
   { timeout: 180000 },
@@ -72,27 +80,27 @@ test(
       const run = sec.offsetHeight - window.innerHeight
       document.documentElement.style.scrollBehavior = 'auto'
       const out: Array<{ p: number; card: string | null }> = []
-    for (const [p] of want as Array<[number, string]>) {
-      document.scrollingElement!.scrollTop = Math.round(top + p * run)
-      // Two-phase settle. SwiftShader renders single-digit fps and the
-      // scroll event propagates a frame or two behind the jump: first let
-      // the new cursor reach the card loop, then wait until some card is
-      // lit, then one more beat so transitional fades resolve to a winner.
-      await new Promise((r) => setTimeout(r, 1000))
-      await new Promise<void>((resolve) => {
-        const t0 = Date.now()
-        const poll = () => {
-          const anyLit = [...document.querySelectorAll('[data-testid^="teardown-card-"]')].some(
-            (c) => Number.parseFloat((c as HTMLElement).style.opacity || '0') > 0.5,
-          )
-          if (anyLit || Date.now() - t0 > 20000) resolve()
-          else setTimeout(poll, 250)
-        }
-        poll()
-      })
-      await new Promise((r) => setTimeout(r, 750))
-      let best: string | null = null
-      let bestO = 0.5
+      for (const [p] of want as Array<[number, string]>) {
+        document.scrollingElement!.scrollTop = Math.round(top + p * run)
+        // Two-phase settle. SwiftShader renders single-digit fps and the
+        // scroll event propagates a frame or two behind the jump: first let
+        // the new cursor reach the card loop, then wait until some card is
+        // lit, then one more beat so transitional fades resolve to a winner.
+        await new Promise((r) => setTimeout(r, 1000))
+        await new Promise<void>((resolve) => {
+          const t0 = Date.now()
+          const poll = () => {
+            const anyLit = [...document.querySelectorAll('[data-testid^="teardown-card-"]')].some(
+              (c) => Number.parseFloat((c as HTMLElement).style.opacity || '0') > 0.5,
+            )
+            if (anyLit || Date.now() - t0 > 20000) resolve()
+            else setTimeout(poll, 250)
+          }
+          poll()
+        })
+        await new Promise((r) => setTimeout(r, 750))
+        let best: string | null = null
+        let bestO = 0.5
         for (const c of [...document.querySelectorAll('[data-testid^="teardown-card-"]')]) {
           const o = Number.parseFloat((c as HTMLElement).style.opacity || '0')
           if (o > bestO) {
