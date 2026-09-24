@@ -1,74 +1,68 @@
 import type { Group } from 'three'
 import { DIM } from '../../components/PhoneViewer/phoneDimensions.ts'
-import {
-  FEATURE_OFFSET,
-  FLIP,
-  LAYER_GAP,
-  LAYER_GAP_COMPACT,
-  featureFrame,
-  layerOffset,
-  type FeatureFrame,
-  type TeardownLayer,
-} from './layers.ts'
-function clamp01(t: number): number {
-  return Math.min(1, Math.max(0, t))
-}
+import { LAYER_GAP, layerOffset, peelLocal, type TeardownLayer } from './layers.ts'
 
 /**
- * One teardown layer's slot-plus-feature-gesture transform (round 03
- * A.6.4). Both drivers — FilmDirector's shell groups and Internals' parts
- * — implement this separately with different names; that duplication is
- * how layer bugs survive review. Goals converge, so rest is exact.
+ * Module pivot in phone-local xy: the lens-up turn rotates about the
+ * module center, not the group origin (which would swing the 47mm disc
+ * 92mm down the stack).
+ */
+const MODULE_PIVOT_Y = 0.0458
+
+/**
+ * One teardown layer's slot transform (sandwich rewrite). The layer rides
+ * its peel-staggered slot offset and nothing else: position converges on
+ * the slot, rotation stays zero, scale stays one. Both drivers — the
+ * FilmDirector's shell groups and Internals' parts — share this helper, so
+ * layer bugs cannot survive review in only one of them.
+ *
+ * Sole exception: the camera layer parks lens-up. It is the only layer
+ * whose decorated face points away from the tour camera, so as it peels
+ * it turns over about the module center — parked by full separation,
+ * exactly mirrored on reverse. Nothing detaches or travels for the
+ * camera; the turn is a pure function of the layer's own peel.
  *
  * `slotZ` overrides the slot for nested groups: the camera module is a
- * child of `back`, so its slot is slot(8) minus slot(9). Callers own spin
- * (screws) on top of the written rotation.
+ * child of `back`, so its slot is slot(8) minus slot(9).
  *
- * Writes into `group`, reusing the caller's `frame` scratch: zero
- * allocation per frame.
+ * Snap on jumps: smooth scroll moves goals sub-millimeter per frame and
+ * damps invisibly; a flick moves them centimeters, and damping toward a
+ * receding goal is what reads as parts flying everywhere on reverse.
+ * Snapping past 10mm keeps every frame exact with no lag pile-up.
  */
 export function applyLayerTransform(
   group: Group,
   layer: TeardownLayer,
-  cursor: number,
   sep: number,
   gap: number,
   damp: number,
-  reduced: boolean,
-  frame: FeatureFrame,
   slotZ?: number,
 ): void {
-  featureFrame(clamp01(cursor - layer.index), layer.weight, frame, reduced)
-  const off = slotZ ?? layerOffset(layer.index, 10, gap, sep)
-  // Scale about the hero pivot, not the group origin (overnight fix):
-  // part groups carry layout offsets, and scaling those about the phone
-  // origin displaces the hero by (scale-1) × offset. Counter-translate by
-  // the flipped pivot so the featured part stays centered. Exact at rest
-  // (scale 1 → no compensation).
-  const bumpScale =
-    1 + (layer.featureScale - 1) * frame.scale * (gap <= LAYER_GAP_COMPACT ? 0.85 : 1)
-  const theta = FLIP.x * frame.turn
-  const cosT = Math.cos(theta)
-  const sinT = Math.sin(theta)
-  const k = bumpScale - 1
-  const gx = FEATURE_OFFSET.x * frame.detach - k * layer.heroPivot[0]
-  const gy = FEATURE_OFFSET.y * frame.detach - k * (layer.heroPivot[1] * cosT)
-  const gz = off + FEATURE_OFFSET.z * frame.detach - k * (layer.heroPivot[1] * sinT)
-  // Snap on jumps (overnight fling fix): smooth scroll moves goals
-  // sub-millimeter per frame and damps invisibly; a flick moves them
-  // centimeters, and damping toward a receding goal is what reads as
-  // parts flying everywhere on reverse. Snapping past 10mm keeps every
-  // frame exact with no lag pile-up. Rotation/scale are set directly
-  // below, so they cannot lag at any speed.
-  const travel = Math.hypot(gx - group.position.x, gy - group.position.y, gz - group.position.z)
+  const local = peelLocal(sep, layer.index)
+  const off = slotZ ?? layerOffset(layer.index, 10, gap, local)
+  let gx = 0
+  let gy = 0
+  let gz = off
+  let turn = 0
+  if (layer.id === 'camera') {
+    turn = Math.PI * local
+    const c = Math.cos(turn)
+    const s = Math.sin(turn)
+    // Turn about the pivot, then carry the slot: the module stays on its
+    // slot upside-down instead of swinging to the mirrored slot.
+    gy = MODULE_PIVOT_Y * (1 - c)
+    gz = off - MODULE_PIVOT_Y * s
+  }
+  const dx = gx - group.position.x
+  const dy = gy - group.position.y
+  const dz = gz - group.position.z
+  const travel = Math.hypot(dx, dy, dz)
   const d = travel > 0.01 ? 1 : damp
-  group.position.x += (gx - group.position.x) * d
-  group.position.y += (gy - group.position.y) * d
-  group.position.z += (gz - group.position.z) * d
-  group.rotation.set(FLIP.x * frame.turn, FLIP.y * frame.turn, FLIP.z * frame.turn)
-  // Compact viewports shrink the hero bump so the layer never crops (the
-  // gap comparison above already selected it into bumpScale).
-  group.scale.setScalar(bumpScale)
+  group.position.x += dx * d
+  group.position.y += dy * d
+  group.position.z += dz * d
+  group.rotation.set(turn, 0, 0)
+  group.scale.setScalar(1)
 }
 
 type V3 = readonly [number, number, number]

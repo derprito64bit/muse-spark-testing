@@ -81,8 +81,10 @@ export function Stage({ progress }: { progress: MotionValue<number> }) {
     // uniform gradient would read as fog, not a room.
     g.addColorStop(0.5, topCss)
     g.addColorStop(0.56, baseCss)
-    g.addColorStop(0.75, '#090a0e')
-    g.addColorStop(1, '#050608')
+    // Below the horizon the cream room falls to warm shadow (the value
+    // structure survives: crown, base, horizon break, shaded distance).
+    g.addColorStop(0.75, '#8f8674')
+    g.addColorStop(1, '#57503f')
     ctx.fillStyle = g
     ctx.fillRect(0, 0, 64, 256)
     texture.needsUpdate = true
@@ -110,10 +112,10 @@ export function Stage({ progress }: { progress: MotionValue<number> }) {
         <sphereGeometry args={[1, 48, 32]} />
         <meshBasicMaterial map={texture} side={THREE.BackSide} depthWrite={false} />
       </mesh>
-      {/* Floor: matte, no specular character. A backdrop, not a subject. */}
+      {/* Floor: matte cream, a backdrop, not a subject. */}
       <mesh position={[0, -0.42, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[3, 64]} />
-        <meshStandardMaterial color={new THREE.Color('#14161d')} roughness={0.95} metalness={0} />
+        <meshStandardMaterial color={new THREE.Color('#c9c1ad')} roughness={0.95} metalness={0} />
       </mesh>
       {/* Contact pool: broad occlusion, the device's weight made visible. */}
       <mesh ref={pool} position={[0, -0.415, 0]} rotation={[-Math.PI / 2, 0, 0]}>

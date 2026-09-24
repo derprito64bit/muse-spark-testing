@@ -1,4 +1,4 @@
-import { Color, MeshBasicMaterial, MeshStandardMaterial } from 'three'
+import { Color, DoubleSide, MeshBasicMaterial, MeshStandardMaterial } from 'three'
 import { createDieMarkingTexture, createFloorplanTexture } from './siliconTextures.ts'
 
 export interface InternalsMaterialSet {
@@ -108,9 +108,14 @@ export function createInternalsMaterials(dressed = false): InternalsMaterialSet 
     ...transparent,
   })
   const housing = new MeshStandardMaterial({
-    color: new Color('#22262e'),
-    roughness: 0.45,
-    metalness: 0.8,
+    // Machined mid-gray, not black: the camera plate dominates the tour
+    // frames from above and must read as metal under the key, with the
+    // dark lens cups contrasting against it. Double-sided: flat rings and
+    // caps stay visible when their layer parks turned over.
+    color: new Color('#3a414c'),
+    roughness: 0.38,
+    metalness: 0.85,
+    side: DoubleSide,
     ...transparent,
   })
   const coil = new MeshStandardMaterial({
@@ -141,6 +146,7 @@ export function createInternalsMaterials(dressed = false): InternalsMaterialSet 
     color: new Color('#05070a'),
     roughness: 0.9,
     metalness: 0,
+    side: DoubleSide,
     ...transparent,
   })
   const dieMark = new MeshBasicMaterial({

@@ -1,5 +1,4 @@
 import { silhouetteHeightM, silhouetteWidthM } from '../components/PhoneViewer/phoneDimensions.ts'
-import { TEARDOWN_LAYERS, cursorAt } from './teardown/layers.ts'
 
 export interface FitOptions {
   /** Target share of viewport height the phone should fill. */
@@ -93,21 +92,18 @@ const TEARDOWN_MACRO = { start: 0.39, end: 0.47 }
 
 /**
  * Minimum vertical FOV keeping a macro subject framed on narrow viewports.
- * Over the teardown run the floor follows the currently featured layer's
- * own half-height from the manifest (logic-board 0.069 sets the widest in
- * this span, silicon 0.0125 the tightest) instead of one die-sized floor
- * for layers with very different footprints.
+ * Over the teardown run the floor is the full phone silhouette: the tour
+ * keeps the whole stack framed (no per-layer hero bumps in sandwich mode),
+ * so one constant floor replaces the old per-layer manifest lookup.
  *
  * Division of labor with the fit solver (round 03 9e, measured): the fit
  * now contains the whole separated stack, so these floors bind only in
- * narrow corners (1 of 27 sampled aspect/progress points, thermal at 0.4
- * aspect) — kept as the backstop for exactly those, not removed.
+ * narrow corners — kept as the backstop for exactly those, not removed.
  */
 export function macroFloorFov(p: number, distanceM: number, aspect: number): number {
   let halfM = 0
   if (p >= TEARDOWN_MACRO.start && p <= TEARDOWN_MACRO.end) {
-    const featured = Math.min(9, Math.max(0, Math.floor(cursorAt(p))))
-    halfM = TEARDOWN_LAYERS[featured]?.featureHalfM ?? 0
+    halfM = 0.08
   } else {
     for (const region of MACRO_REGIONS) {
       if (p >= region.start && p <= region.end) halfM = region.halfM

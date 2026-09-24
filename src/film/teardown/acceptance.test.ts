@@ -4,9 +4,8 @@ import { fitFov } from '../framing.ts'
 import { projectedExtentM } from '../../lib/projected-extent.ts'
 import { sampleFilm } from '../sample.ts'
 import { computeFilmStates } from '../states.ts'
-import { LAYER_GAP, featureFrame, layerOffset } from './layers.ts'
+import { LAYER_GAP, layerOffset, peelLocal } from './layers.ts'
 import { stackProjection } from './transform.ts'
-import type { FeatureFrame } from './layers.ts'
 
 /** Part A acceptance, automated (round 03 A.7): pure math, no renderer. */
 describe('teardown acceptance', () => {
@@ -87,23 +86,13 @@ describe('teardown acceptance', () => {
   })
 
   it('parks every layer group exactly at zero separation', () => {
-    // Goals are exact: slot offsets vanish and envelopes decay to zero at
-    // both ends of the local window, so rest needs no convergence.
+    // Goals are exact: slot offsets vanish and peel locals decay to zero
+    // at sep 0 for every layer, so rest needs no convergence.
     for (let i = 0; i < 10; i++) {
       // Negative zero is still zero rest: (i - 4.5) * gap * 0.
       expect(layerOffset(i, 10, LAYER_GAP, 0)).toBeCloseTo(0, 12)
-    }
-    const frame: FeatureFrame = { detach: 0, turn: 0, scale: 0 }
-    for (const weight of ['light', 'medium', 'heavy'] as const) {
-      featureFrame(0, weight, frame)
-      expect(frame.detach).toBe(0)
-      expect(frame.turn).toBe(0)
-      featureFrame(1, weight, frame)
-      expect(frame.detach).toBe(0)
-      expect(frame.turn).toBe(0)
-      expect(frame.scale).toBe(0)
-      featureFrame(0, weight, frame, true)
-      expect(frame.detach).toBe(0)
+      expect(peelLocal(0, i)).toBe(0)
+      expect(peelLocal(1, i)).toBe(1)
     }
   })
 })

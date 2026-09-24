@@ -14,8 +14,8 @@ import {
   LAYER_GAP_COMPACT,
   TEARDOWN_LAYERS,
   layerOffset,
+  peelLocal,
   weightDamp,
-  type FeatureFrame,
 } from './teardown/layers.ts'
 import { applyLayerTransform } from './teardown/transform.ts'
 import { sampleFilm } from './sample.ts'
@@ -122,45 +122,10 @@ const NO_DEPTH_WRITE: ReadonlySet<string> = new Set([
 ])
 
 /**
- * Context recede map (Prompt D section 5.1): shell materials per teardown
- * layer. Unfeatured layers step back to 30% over the ghost dissolve while
- * the featured layer keeps its rest opacity. Internals share materials
- * across layers, so the pop there comes from the accent light and motion
- * instead (documented in docs/teardown.md).
+ * Sandwich rewrite: the flip-beat isolation is gone with the flips. The
+ * tour reads through labels, accent light, and the aim track instead of
+ * dimming the rest of the stack.
  */
-const RECEDE_MATS: Partial<Record<string, ReadonlyArray<keyof PhoneMaterialSet>>> = {
-  'cover-glass': ['screen'],
-  display: ['display', 'bezel'],
-  midframe: ['framePX', 'frameNX', 'framePY', 'frameNY', 'frameChamfer', 'button'],
-  'rear-panel': ['back', 'logo', 'regulatory', 'panelLower', 'panelSeam'],
-  camera: [
-    'island',
-    'lensRing',
-    'lensGlassA',
-    'lensGlassB',
-    'lensGlassC',
-    'lensBarrel',
-    'lensCavity',
-    'sensorGlint',
-    'collarOuter',
-    'collarTop',
-    'knurlWall',
-    'collarStep',
-    'glassSeal',
-    'moduleGlass',
-    'medallion',
-    'medallionRing',
-    'periscopeGlass',
-    'periscopePrism',
-    'flashArc',
-    'flashDiffuser',
-    'tofWindow',
-    'tofEmitter',
-    'tofReceiver',
-    'tofHousing',
-    'moduleMic',
-  ],
-}
 
 export interface FilmRefs {
   hero: MutableRefObject<THREE.Group | null>
@@ -206,7 +171,6 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     accent: 0,
     accentTarget: new THREE.Color('#ffffff'),
     accentColor: new THREE.Color('#ffffff'),
-    teardown: { detach: 0, turn: 0, scale: 0 } as FeatureFrame,
     extents: { horizontalM: 0, verticalM: 0 },
     extCam: [0, 0, 1] as [number, number, number],
     extTgt: [0, 0, 0] as [number, number, number],
@@ -264,6 +228,16 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     if (!reduced) {
       lookX += THREE.MathUtils.clamp(refs.parallaxX.get(), -0.5, 0.5) * 0.016
       lookY += THREE.MathUtils.clamp(refs.parallaxY.get(), -0.5, 0.5) * 0.012
+    }
+    // Sandwich tour: the aim drifts toward the spotlight layer's slot so
+    // the copy subject stays near frame center while the stack itself
+    // never moves for the camera. Phone-local +z maps to screen-up in the
+    // flat lay, so the slot offset applies directly to lookY at half gain.
+    // Same slot expression as the driver, so aim converges on the true
+    // layer position; pure function of progress, damps like the aim.
+    if (act === 'teardown' && featured >= 0 && st.stackSeparate > 0.001) {
+      const tourGap = state.size.width < 900 ? LAYER_GAP_COMPACT : LAYER_GAP
+      lookY += 0.5 * layerOffset(featured, 10, tourGap, peelLocal(st.stackSeparate, featured))
     }
     cam.lookAt(lookX, lookY, s.look.z)
 
@@ -383,7 +357,7 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
       mat.opacity = ghost ? Math.max(0.02, base - st.shellGhost * 0.9) : base
     }
     if (ghost) {
-      // While the teardown stack is separated, RECEDE_MATS owns the midframe
+      // While the shell dissolves, the frame group keeps its own alpha
       // (round 01 A3): the retired chipFocus term pinned the frame shut
       // through the silicon beat and fought the teardown driver over it.
       const chipDim = st.stackSeparate > 0.001 ? 0 : st.chipFocus * 0.8
@@ -511,14 +485,13 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
     c.teardownGap = state.size.width < 900 ? LAYER_GAP_COMPACT : LAYER_GAP
     c.reducedMotion = reduced
 
-    // Teardown layer driver (Prompt D sections 4-5): shell groups ride
-    // their layer slots plus the four-phase feature gesture, damped by
-    // weight class. One shared helper with the Internals driver (round 03
-    // A.6.4). The module nests inside back, so its goal is relative
-    // to keep its world offset on its own layer.
+    // Teardown layer driver (sandwich rewrite, Prompt D sections 4-5):
+    // shell groups ride their peel-staggered layer slots, damped by weight
+    // class. No detach, no flip, no scale bump — the camera tours the open
+    // stack instead (aim track below). The module nests inside back, so its
+    // goal is relative to keep its world offset on its own layer.
     const teardownSep = st.stackSeparate
     if (teardownSep > 0.001) {
-      const cursor = st.layerCursor
       for (const layer of TEARDOWN_LAYERS) {
         const damp = reduced ? 1 : 1 - Math.exp(-delta * weightDamp(layer.weight))
         for (const name of layer.shell) {
@@ -535,34 +508,10 @@ export function FilmDirector({ progress, materials, refs }: FilmDirectorProps) {
           if (grp === null) continue
           const base =
             name === 'module'
-              ? layerOffset(8, 10, c.teardownGap, teardownSep) -
-                layerOffset(9, 10, c.teardownGap, teardownSep)
+              ? layerOffset(8, 10, c.teardownGap, peelLocal(teardownSep, 8)) -
+                layerOffset(9, 10, c.teardownGap, peelLocal(teardownSep, 9))
               : undefined
-          applyLayerTransform(
-            grp,
-            layer,
-            cursor,
-            teardownSep,
-            c.teardownGap,
-            damp,
-            reduced,
-            s.teardown,
-            base,
-          )
-        }
-      }
-      // Context recede over the ghost dissolve; featured keeps rest opacity.
-      // Unfeatured layers fall to 30% so the hero stands isolated instead
-      // of merging with the stack behind it (overnight isolation fix).
-      for (const layer of TEARDOWN_LAYERS) {
-        const mats = RECEDE_MATS[layer.id]
-        if (mats === undefined) continue
-        const dim = layer.index === featured ? 1 : 1 - 0.7 * st.contextRecede
-        for (const m of mats) {
-          const base = BASE_OPACITY[m] ?? 1
-          materials[m].opacity = ghost
-            ? Math.max(0.02, base - st.shellGhost * 0.9) * dim
-            : base * dim
+          applyLayerTransform(grp, layer, teardownSep, c.teardownGap, damp, base)
         }
       }
     } else {

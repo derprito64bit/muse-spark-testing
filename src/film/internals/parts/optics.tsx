@@ -22,10 +22,13 @@ export function OpticsPart({
   const { cx, cy, cz, r } = CAMERA_INTERNAL
   return (
     <group userData={{ part: 'optics', readout: '135 mm folded periscope' }}>
-      {/* Main housing block: the module footprint, seen from inside */}
+      {/* Main housing: an open carrier ring on the module footprint, not a
+        solid plate — the shell module (collar, lenses, medallion) shows
+        through the middle during the tour instead of hiding behind a
+        black disc. */}
       <group ref={register('camera-module')}>
         <mesh position={[cx, cy, cz]}>
-          <cylinderGeometry args={[r * 0.92, r * 0.92, 0.0022, 48]} />
+          <ringGeometry args={[0.012, r * 0.92, 48]} />
           <primitive object={materials.housing} attach="material" />
         </mesh>
       </group>
@@ -36,34 +39,38 @@ export function OpticsPart({
         </mesh>
       </group>
       {specs.map((lens) => (
-        <group key={lens.key} ref={register(`lens-${lens.key}`)} position={[lens.x, lens.y, cz]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
+        // Seat lives on the meshes, not the group: the teardown driver
+        // owns group positions (slot + lens-up turn), so a seat on the
+        // group would be overwritten and every barrel would collapse to
+        // the phone origin.
+        <group key={lens.key} ref={register(`lens-${lens.key}`)}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[lens.x, lens.y, cz]}>
             <cylinderGeometry args={[lens.r, lens.r * 1.1, 0.0024, 24]} />
             <primitive object={materials.housing} attach="material" />
           </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.0004]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[lens.x, lens.y, cz + 0.0004]}>
             <circleGeometry args={[lens.r * 0.7, 24]} />
             <primitive object={materials.dark} attach="material" />
           </mesh>
         </group>
       ))}
       {/* Periscope block below the triangle, matching the exterior window */}
-      <group ref={register('lens-periscope')} position={[cx + PERISCOPE.x, cy + PERISCOPE.y, cz]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
+      <group ref={register('lens-periscope')}>
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[cx + PERISCOPE.x, cy + PERISCOPE.y, cz]}>
           <boxGeometry args={[PERISCOPE.w, PERISCOPE.h, 0.0026]} />
           <primitive object={materials.housing} attach="material" />
         </mesh>
       </group>
       {/* ToF module behind its window, separating on its own delay */}
-      <group
-        ref={register('tof-module')}
-        position={[
-          cx + TOF.ringR * Math.cos((TOF.angleDeg * Math.PI) / 180),
-          cy + TOF.ringR * Math.sin((TOF.angleDeg * Math.PI) / 180),
-          cz,
-        ]}
-      >
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
+      <group ref={register('tof-module')}>
+        <mesh
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[
+            cx + TOF.ringR * Math.cos((TOF.angleDeg * Math.PI) / 180),
+            cy + TOF.ringR * Math.sin((TOF.angleDeg * Math.PI) / 180),
+            cz,
+          ]}
+        >
           <boxGeometry args={[0.0082, 0.0034, 0.0012]} />
           <primitive object={materials.housing} attach="material" />
         </mesh>

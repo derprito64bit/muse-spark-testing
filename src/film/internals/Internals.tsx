@@ -3,7 +3,7 @@ import { useMemo, useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { INTERNALS_KEYS, type InternalsMaterialSet } from './internalsMaterials.ts'
 import { EXPLODE_DIRECTIONS, EXPLODE_PARTS, partProgress } from './explode.ts'
-import { PART_LAYER, TEARDOWN_LAYERS, weightDamp, type FeatureFrame } from '../teardown/layers.ts'
+import { PART_LAYER, TEARDOWN_LAYERS, weightDamp } from '../teardown/layers.ts'
 import { applyLayerTransform } from '../teardown/transform.ts'
 import { calloutBridge, featureAnchorBridge } from '../overlay/callouts.ts'
 import { BoardPart } from './parts/board.tsx'
@@ -55,7 +55,6 @@ interface InternalsProps {
 export function Internals({ materials, control }: InternalsProps) {
   const groups = useRef<Record<string, THREE.Group[]>>({})
   const scratch = useRef({ dir: new THREE.Vector3() })
-  const feat = useRef<FeatureFrame>({ detach: 0, turn: 0, scale: 0 })
   const register: PartRegister = useMemo(() => {
     const map: Record<string, THREE.Group[]> = {}
     groups.current = map
@@ -95,19 +94,10 @@ export function Internals({ materials, control }: InternalsProps) {
       for (const g of targets) {
         g.visible = visible
         if (teardown) {
-          // Layer slot plus the feature gesture; damped by weight class so
-          // mass reads from motion alone. Goals converge, so rest is exact.
-          // Shared helper with the director driver (round 03 A.6.4).
-          applyLayerTransform(
-            g,
-            layer ?? TEARDOWN_LAYERS[5]!,
-            c.layerCursor,
-            sep,
-            c.teardownGap,
-            damp,
-            c.reducedMotion,
-            feat.current,
-          )
+          // Layer slot, damped by weight class so mass reads from motion
+          // alone. Goals converge, so rest is exact. Shared helper with
+          // the director driver (round 03 A.6.4).
+          applyLayerTransform(g, layer ?? TEARDOWN_LAYERS[5]!, sep, c.teardownGap, damp)
           if (part.spin === true) g.rotation.z = wSpin * Math.PI * 2
         } else {
           g.position.set(dir.x * travel, dir.y * travel, dir.z * travel)
@@ -163,9 +153,11 @@ export function Internals({ materials, control }: InternalsProps) {
       1 + c.energy * 1 + c.battLift * 0.5 + (featured === 3 ? 1 : 0)
     // Coil status ring: charging indicator for the Clear finish.
     materials.coilRing.emissiveIntensity = 0.25 + c.coilRing * 2.4
-    // Featured-layer anchor for the HTML pointer (overnight fix): world
-    // position published from the driving closure, which is live by
-    // construction. getWorldPosition refreshes matrices itself.
+    // Featured-layer anchor for the HTML pointer: world position
+    // published from the driving closure, which is live by construction.
+    // Parts ride their slots rigidly (no flip, no scale), so any part
+    // group's world position IS the layer position. getWorldPosition
+    // refreshes matrices itself.
     const featPartId = featured >= 0 ? featureCalloutPart(featured) : null
     const featGroup = featPartId !== null ? (groups.current[featPartId]?.[0] ?? null) : null
     if (featGroup !== null) {

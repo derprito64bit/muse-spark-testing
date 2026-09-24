@@ -1,4 +1,10 @@
-# Exploded-view plan — flat lay-out, per-layer dive and flip, capability callouts
+# Exploded-view plan — SUPERSEDED by the sandwich rewrite (2026-09-24)
+
+The dive-and-flip direction below was built, then scrapped per user
+direction: every layer now rides its slot while the camera tours the open
+stack (see `docs/teardown.md`). Kept for the part-registry inventory only.
+
+# Original plan — flat lay-out, per-layer dive and flip, capability callouts
 
 Goal (user spec): the device explodes while flat with every part laid out;
 scrolling dives into each layer, flips it toward the viewer in detail, with

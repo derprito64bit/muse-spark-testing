@@ -224,78 +224,18 @@ export function cursorAt(p: number): number {
   return Math.min(10, Math.max(0, (p - 0.295) / 0.02))
 }
 
-function smooth01(t: number): number {
-  const x = Math.min(1, Math.max(0, t))
-  return x * x * (3 - 2 * x)
-}
-
-/** Overshooting ease for light layers arriving into the feature pose. */
-function easeOutBack01(t: number): number {
-  const x = Math.min(1, Math.max(0, t))
-  const c1 = 1.30158
-  const c3 = c1 + 1
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
-}
-
-export interface FeatureFrame {
-  /** 0..1 detach travel envelope (phase 1 in, phase 4 out). */
-  detach: number
-  /** 0..1 flip envelope (phase 2 in, phase 4 out). */
-  turn: number
-  /** 0..1 hero-scale envelope (hold window only). */
-  scale: number
-}
-
 /**
- * Four-phase feature envelope from local progress: detach 0-0.15, flip
- * 0.25-0.70, hold 0.60-0.85, restack 0.85-1.0. Sequential by construction
- * (overnight fix): the next layer starts turning only once the previous
- * one is fully restacked, so exactly one part ever flips at a time. The
- * flip transit is slow and the hold plateau wide — scroll headroom on
- * both sides of every face-on beat. Writes into `out`: zero allocation
- * per frame. Light layers overshoot on arrival; heavy layers never do.
- * Under reduced motion there is no tumble and no overshoot: detach and
- * scale cross-fade linearly across the same phase landmarks instead of
- * stepping, so scrubbing never teleports a layer (round 01 A7).
+ * Top-down peel (sandwich rewrite): every layer rides its own slot offset
+ * and nothing else — no detach travel, no flip, no scale bump. The cover
+ * glass (index 0) lifts first and the rear panel (index 9) lands last; all
+ * ten arrive by sep = 1, so the open sandwich holds through the tour and
+ * restacks in exact mirror on reverse. Pure function of sep.
  */
-export function featureFrame(
-  lp: number,
-  weight: TeardownLayer['weight'],
-  out: FeatureFrame,
-  snap = false,
-): FeatureFrame {
-  if (snap) {
-    const clamp01 = (t: number): number => Math.min(1, Math.max(0, t))
-    const up = clamp01((lp - 0.02) / 0.13)
-    const release = clamp01((0.98 - lp) / 0.13)
-    out.detach = Math.min(up, release)
-    out.turn = 0
-    out.scale = Math.min(clamp01((lp - 0.6) / 0.08), clamp01((0.85 - lp) / 0.08))
-    return out
-  }
-  const back = smooth01((lp - 0.85) / 0.15)
-  const amp = 1 - back
-  const raw = lp / 0.15
-  out.detach = (weight === 'light' ? easeOutBack01(raw) : smooth01(raw)) * amp
-  out.turn = smooth01((lp - 0.25) / 0.45) * amp
-  out.scale = smooth01((lp - 0.6) / 0.25) * amp
-  return out
-}
-
-/**
- * Local progress 0..1 for layer i within the feature run. Pure function of
- * the master progress: reverses exactly, trivially testable.
- */
-export function layerProgress(
-  p: number,
-  index: number,
-  count: number,
-  runStart: number,
-  runEnd: number,
-): number {
-  const window = (runEnd - runStart) / count
-  const local = (p - (runStart + window * index)) / window
-  return Math.min(1, Math.max(0, local))
+const PEEL_STAGGER = 0.04
+const PEEL_SPAN = 0.64 // worst stagger 0.36 + span: layer 9 lands at 1.0
+export function peelLocal(sep: number, index: number): number {
+  const t = Math.min(1, Math.max(0, sep))
+  return Math.min(1, Math.max(0, (t - index * PEEL_STAGGER) / PEEL_SPAN))
 }
 
 /** Damping rate per weight class: mass inferable from motion alone. */
@@ -304,14 +244,3 @@ export function weightDamp(weight: TeardownLayer['weight']): number {
   if (weight === 'medium') return 4
   return 5.5
 }
-
-/** Feature gesture in hero-local meters: right and toward the viewer. */
-export const FEATURE_OFFSET = { x: 0.07, y: 0.008, z: 0.014 } as const
-/**
- * Turnover bringing rear-facing detail up to the overhead camera. Parts
- * are modelled facing phone-local -z (the old rear viewer); laid flat
- * that faces the table. PI minus the residual tilt turns decorated faces
- * (die marking, lens glass, wordmark) up toward the camera. NOT a tilt
- * cancel: cancelling would present their blank backs.
- */
-export const FLIP = { x: Math.PI - 0.06, y: -0.085, z: -0.02 } as const

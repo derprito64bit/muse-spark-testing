@@ -41,14 +41,13 @@ describe('responsive framing', () => {
     expect(macroFloorFov(0.1, 0.9, 0.5)).toBe(0)
   })
 
-  it('floors the teardown run per featured layer, not one die size (round 01 A4)', () => {
-    // p 0.392 (logic-board, 0.069) > p 0.44 (power-coil, 0.026) >
-    // p 0.405 (silicon, 0.0125): same camera, wider subject, wider floor.
+  it('floors the teardown run on the full silhouette, not one die size (sandwich rewrite)', () => {
+    // No per-layer hero bumps: board, coil, and silicon share one floor.
     const board = macroFloorFov(0.392, 0.5, 0.5)
     const coil = macroFloorFov(0.44, 0.5, 0.5)
     const silicon = macroFloorFov(0.405, 0.5, 0.5)
-    expect(board).toBeGreaterThan(coil)
-    expect(coil).toBeGreaterThan(silicon)
+    expect(board).toBeCloseTo(coil, 9)
+    expect(coil).toBeCloseTo(silicon, 9)
     expect(silicon).toBeGreaterThan(0)
   })
 

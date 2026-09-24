@@ -12,7 +12,10 @@ import { key, type FilmKey } from '../key.ts'
 export const CAMERA_KEYS: FilmKey[] = [
   key({
     at: 0.56,
-    pose: { rx: -0.3, ry: 1.55, rz: 0.02, scale: 1.16, px: 0, py: 0.02 },
+    // ry stays clear of PI/2: a keyframe at the yaw minimum parks the
+    // phone edge-on (collar outline foreshortens to a floating-looking
+    // ring), so the minimum sits at a readable rear three-quarter instead.
+    pose: { rx: -0.3, ry: 1.3, rz: 0.02, scale: 1.16, px: 0, py: 0.02 },
     camera: { pos: [-0.0106, 0.0096, 0.7579], target: [-0.0206, -0.0104, -0.0221] },
     lens: { fov: 20, fit: 0.62 },
     look: { exposure: 1.05 },

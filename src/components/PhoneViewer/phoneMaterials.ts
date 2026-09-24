@@ -452,15 +452,18 @@ export function createPhoneMaterials(params: FinishParams): PhoneMaterialSet {
   const collarStep = makeMaterial({
     color: new Color(params.frameColor),
     metalness: 1,
-    roughness: 0.52,
+    roughness: 0.44,
     roughnessMap: brush,
-    envMapIntensity: 0.9,
+    envMapIntensity: 1.25,
   })
   const glassSeal = makeMaterial({
-    color: new Color('#0c0e13'),
+    // Seated gasket, not a floating wire: dark, but with enough env
+    // response to catch a rim highlight at grazing angles so the ring
+    // reads as seated in the camera-act yaw transit.
+    color: new Color('#161b24'),
     metalness: 0,
-    roughness: 0.7,
-    envMapIntensity: 0.25,
+    roughness: 0.55,
+    envMapIntensity: 0.8,
   })
   // Per-optic micro-text, etched in the roughness domain. Must match
   // src/data/product.ts focal specs (Prompt A2 section 9).

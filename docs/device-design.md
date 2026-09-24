@@ -95,8 +95,8 @@ block, coax runs, 8 spinning Torx screws, SoC package (substrate, 14×14
 BGA, marked die, floorplan, decoupling ring). Battery 4000 mAh (cell
 volume 19cm³ ≈ 800 Wh/L Si-C — data and hardware agree, tested).
 Choreography: removal-order delays + per-layer radial blends + weight
-tumble; teardown mode lays layers flat with per-layer feature flips
-(see `docs/teardown.md`).
+damping; teardown mode lays layers flat in a sandwich stack with a
+top-down peel and a lens-up camera module (see `docs/teardown.md`).
 
 ## Lighting and color
 
@@ -128,7 +128,7 @@ tumble; teardown mode lays layers flat with per-layer feature flips
 - Real-GPU frame times: SwiftShader lower bounds only (teardown scroll
   4.2 avg / 300ms worst on CPU GL). Needs a device pass.
 - Per-part internals recede: shared materials; featured pops via
-  emissive (unique mats), scale, accent, and motion instead.
+  emissive (unique mats), accent light, aim track, and pointer instead.
 
 ## Prompt A2 rubric (15 checks, honest)
 

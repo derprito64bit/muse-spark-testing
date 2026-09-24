@@ -23,7 +23,7 @@ vanish. Fixed aurora wash stays at negligible alpha.
 | ------------------------- | ------------- | ------- | ------------------ | ------------------------------- |
 | `ink` `#201a12`           | `night`       | 14.2:1  | 7:1 primary        | pass                            |
 | `dim` `#5c554a`           | `night`       | 6.08:1  | 4.5:1 secondary    | pass                            |
-| `faint` `#655d4f`         | `night`    | 5.36:1 | 3:1 technical only | pass, non-essential labels only |
+| `faint` `#655d4f`         | `night`       | 5.36:1  | 3:1 technical only | pass, non-essential labels only |
 | `aether` `#1f5fd0`        | `night`       | 4.80:1  | 4.5:1 live data    | pass                            |
 | `aether-strong` `#0f4fc4` | `night`       | 5.90:1  | 4.5:1 focus/active | pass                            |
 | `ink`                     | `surface`     | 15.31:1 | 7:1                | pass                            |

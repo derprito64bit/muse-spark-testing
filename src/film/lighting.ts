@@ -19,7 +19,12 @@ export interface StageLightState {
   stageTop: string
 }
 
-/** Per-act studio lighting. Damped between acts at 5/s, never snapped. */
+/** Cream studio (user direction): the whole film sits in a warm product-
+ * photography room so the obsidian device pops. Per-act value drift keeps
+ * the colour journey alive inside the cream family; display stays the
+ * brightest stage, and the teardown ramp still lightens obviously across
+ * its span. Text contrast is carried by the Prompt D 11 scrim, which
+ * strengthens automatically as the stage brightens (tested). */
 const BASE_LIGHTING: Record<ActId, StageLightState> = {
   arrival: {
     key: 2.2,
@@ -28,8 +33,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#161a24',
-    stageTop: '#232b3d',
+    stage: '#d3ccb9',
+    stageTop: '#ece5d4',
   },
   settle: {
     key: 2.2,
@@ -38,8 +43,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#1a1f2b',
-    stageTop: '#283045',
+    stage: '#d7d0bd',
+    stageTop: '#efe8d8',
   },
   approach: {
     key: 2.4,
@@ -48,8 +53,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 1,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#1e2432',
-    stageTop: '#2e3a50',
+    stage: '#d9d2bf',
+    stageTop: '#f1ebdb',
   },
   teardown: {
     key: 1.6,
@@ -58,8 +63,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.8,
     exposure: 1.05,
     envTint: '#eef2ff',
-    stage: '#3a4252',
-    stageTop: '#4a5468',
+    stage: '#e8e2d2',
+    stageTop: '#f6f1e6',
   },
   camera: {
     key: 2.4,
@@ -68,8 +73,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 1,
     exposure: 1.05,
     envTint: '#d9e6ff',
-    stage: '#22303a',
-    stageTop: '#31485a',
+    stage: '#ded8c6',
+    stageTop: '#f1ebdb',
   },
   display: {
     key: 2,
@@ -78,8 +83,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#4a5266',
-    stageTop: '#5d6880',
+    stage: '#ece6d6',
+    stageTop: '#faf5ea',
   },
   storage: {
     key: 2.2,
@@ -88,8 +93,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#2e2a3e',
-    stageTop: '#453f5c',
+    stage: '#d8d1be',
+    stageTop: '#ece4d2',
   },
   battery: {
     key: 1.6,
@@ -98,8 +103,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.8,
     exposure: 1.1,
     envTint: '#f2f5ff',
-    stage: '#33301f',
-    stageTop: '#4d4830',
+    stage: '#dbd4c0',
+    stageTop: '#efe8d7',
   },
   software: {
     key: 2,
@@ -108,8 +113,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#2a2d3e',
-    stageTop: '#3f4360',
+    stage: '#d5cfbc',
+    stageTop: '#e9e2d0',
   },
   ai: {
     key: 2.2,
@@ -118,8 +123,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 0.9,
     exposure: 1,
     envTint: '#ffffff',
-    stage: '#1f2a42',
-    stageTop: '#2f4066',
+    stage: '#d2ccb9',
+    stageTop: '#e6e0ce',
   },
   final: {
     key: 2.6,
@@ -128,8 +133,8 @@ const BASE_LIGHTING: Record<ActId, StageLightState> = {
     env: 1,
     exposure: 1.05,
     envTint: '#ffffff',
-    stage: '#3e4456',
-    stageTop: '#565e78',
+    stage: '#dbd4c1',
+    stageTop: '#eee7d6',
   },
 }
 

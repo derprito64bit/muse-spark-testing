@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Glass } from '../../components/Glass/Glass.tsx'
 import { CHAPTERS, TEARDOWN_COPY } from '../chapters.ts'
 import { inspectHit } from '../inspect.ts'
-import { scrimForStage, stageColors } from '../stage/stageColors.ts'
+import { luminance, scrimForStage, stageColors } from '../stage/stageColors.ts'
 import { scrollToProgress } from '../scroll.ts'
 import { TEARDOWN_LAYERS, cursorAt } from '../teardown/layers.ts'
 import { ACTS } from '../timeline.ts'
@@ -76,12 +76,11 @@ export function FilmOverlay({ progress, runway }: FilmOverlayProps) {
     return () => window.clearInterval(timer)
   }, [act.id])
 
-  // Auto-scroll the teardown showcase (overnight watchability): one press
-  // plays the ten feature windows at ~3s per layer, so each flip (about
-  // half the window) takes the better part of two seconds to face the
-  // user. Any manual input (wheel, touch, keys) takes over instantly.
-  // Never offered under reduced motion. Pure scroll driving — the film
-  // follows exactly.
+  // Auto-scroll the teardown tour (overnight watchability): one press
+  // plays the ten layer windows at ~3s per layer while the camera tours
+  // the open stack. Any manual input (wheel, touch, keys) takes over
+  // instantly. Never offered under reduced motion. Pure scroll driving —
+  // the film follows exactly.
   const [playing, setPlaying] = useState(false)
   useEffect(() => {
     if (!playing) return
@@ -148,20 +147,28 @@ export function FilmOverlay({ progress, runway }: FilmOverlayProps) {
   // Hooks stay above the empty-chapters bail so the order never changes.
   const tintRef = useRef<HTMLDivElement>(null)
   const scrimRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   useMotionValueEvent(progress, 'change', (p) => {
     const v = typeof p === 'number' ? p : 0
     const { base } = stageColors(v)
     const baseHex = `#${base.getHexString()}`
     const tint = tintRef.current
     if (tint !== null) tint.style.backgroundColor = `${baseHex}2e`
-    // Contrast scrim (Prompt D section 11): strengthens as the stage
-    // brightens so text clears 4.5:1 everywhere (tested, not vibed).
+    // Cream room: light stages wear ink text directly instead of the dark
+    // veil (Prompt D 11 scrim only applies while a stage is actually dark).
+    const light = luminance(baseHex) > 0.25
+    const root = rootRef.current
+    if (root !== null) root.classList.toggle('light-scope', light)
     const scrim = scrimRef.current
-    if (scrim !== null) scrim.style.opacity = String(scrimForStage(baseHex))
+    if (scrim !== null) scrim.style.opacity = light ? '0' : String(scrimForStage(baseHex))
   })
   if (chapter === undefined) return null
   return (
-    <div className="pointer-events-none absolute inset-0" aria-live="polite">
+    <div
+      ref={rootRef}
+      className="light-scope pointer-events-none absolute inset-0"
+      aria-live="polite"
+    >
       <div ref={tintRef} aria-hidden="true" className="absolute inset-0" />
       <div
         ref={scrimRef}

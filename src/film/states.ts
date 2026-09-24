@@ -49,8 +49,6 @@ export interface FilmStates {
   stackSeparate: number
   /** 0..10 continuous layer cursor across the feature run (teardown). */
   layerCursor: number
-  /** 0..1 how strongly unfeatured layers recede (teardown). */
-  contextRecede: number
 }
 
 /**
@@ -100,7 +98,6 @@ const STATES: FilmStates = {
   layDown: 0,
   stackSeparate: 0,
   layerCursor: 0,
-  contextRecede: 0,
 }
 
 /**
@@ -164,8 +161,5 @@ export function computeFilmStates(p: number): FilmStates {
   STATES.layDown = ramplike(p, 0.25, 0.265, 0.5, 0.52)
   STATES.stackSeparate = ramplike(p, 0.272, 0.295, 0.485, 0.5)
   STATES.layerCursor = cursor
-  // The descent releases into the restack (round 01 A9): layer 9 runs
-  // p in [0.475, 0.495], so the recede must survive its whole beat.
-  STATES.contextRecede = ramplike(p, 0.295, 0.31, 0.495, 0.505)
   return STATES
 }

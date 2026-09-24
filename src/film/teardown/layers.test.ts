@@ -4,11 +4,9 @@ import {
   LAYER_GAP,
   TEARDOWN_LAYERS,
   cursorAt,
-  featureFrame,
   layerOffset,
-  layerProgress,
+  peelLocal,
   weightDamp,
-  type FeatureFrame,
 } from './layers.ts'
 
 /** Teardown manifest (Prompt D section 4): ten layers, honest stack order. */
@@ -41,14 +39,22 @@ describe('teardown layers', () => {
     expect(layerOffset(4, 10, LAYER_GAP, 0)).toBeCloseTo(0, 12)
   })
 
-  it('maps master progress to per-layer local progress', () => {
-    // Ten windows of 0.020 across 0.295 to 0.495.
-    expect(layerProgress(0.29, 0, 10, 0.295, 0.495)).toBe(0)
-    expect(layerProgress(0.305, 0, 10, 0.295, 0.495)).toBeCloseTo(0.5, 2)
-    expect(layerProgress(0.315, 0, 10, 0.295, 0.495)).toBe(1)
-    expect(layerProgress(0.315, 1, 10, 0.295, 0.495)).toBe(0)
-    expect(layerProgress(0.5, 9, 10, 0.295, 0.495)).toBe(1)
-    expect(layerProgress(0.6, 9, 10, 0.295, 0.495)).toBe(1)
+  it('peels top-down: glass leads, rear panel lands last', () => {
+    // All parked at sep 0, all landed at sep 1.
+    for (let i = 0; i < 10; i++) {
+      expect(peelLocal(0, i)).toBe(0)
+      expect(peelLocal(1, i)).toBe(1)
+    }
+    // Mid-peel the front of the stack is further along than the back.
+    expect(peelLocal(0.3, 0)).toBeGreaterThan(peelLocal(0.3, 5))
+    expect(peelLocal(0.3, 5)).toBeGreaterThan(peelLocal(0.3, 9))
+    expect(peelLocal(0.3, 9)).toBe(0)
+    // Layer 9 lands exactly at full separation, not before.
+    expect(peelLocal(0.99, 9)).toBeLessThan(1)
+    expect(peelLocal(1, 9)).toBe(1)
+    // Clamps, never NaN: scrubbing past the ends is safe.
+    expect(peelLocal(-0.5, 3)).toBe(0)
+    expect(peelLocal(1.5, 3)).toBe(1)
   })
 
   it('moves heavy layers slower than light ones', () => {
@@ -75,53 +81,18 @@ describe('teardown layers', () => {
     expect(cursorAt(0.6)).toBe(10)
   })
 
-  it('plays detach, flip, hold, and restack without allocating', () => {
-    const frame: FeatureFrame = { detach: 0, turn: 0, scale: 0 }
-    featureFrame(0, 'medium', frame)
-    expect(frame.detach).toBe(0)
-    expect(frame.turn).toBe(0)
-    featureFrame(0.11, 'medium', frame)
-    expect(frame.detach).toBeGreaterThan(0.3)
-    featureFrame(0.05, 'medium', frame)
-    expect(frame.turn).toBe(0)
-    featureFrame(0.45, 'medium', frame)
-    expect(frame.turn).toBeGreaterThan(0.3)
-    featureFrame(0.75, 'medium', frame)
-    expect(frame.detach).toBeCloseTo(1, 2)
-    expect(frame.turn).toBeCloseTo(1, 2)
-    expect(frame.scale).toBeGreaterThan(0.5)
-    featureFrame(1, 'medium', frame)
-    expect(frame.detach).toBe(0)
-    expect(frame.turn).toBe(0)
-    expect(frame.scale).toBe(0)
-  })
-
-  it('cross-fades envelopes linearly under reduced motion (round 01 A7)', () => {
-    // No tumble, no overshoot, and no binary teleport: every channel moves
-    // continuously with local progress so scrubbing stays exact.
-    const frame: FeatureFrame = { detach: 0, turn: 0, scale: 0 }
-    featureFrame(0.4, 'light', frame, true)
-    expect(frame.detach).toBeCloseTo(1, 2)
-    expect(frame.turn).toBe(0)
-    featureFrame(0.64, 'medium', frame, true)
-    expect(frame.scale).toBeGreaterThan(0.4)
-    expect(frame.scale).toBeLessThan(0.6)
-    featureFrame(0.9, 'medium', frame, true)
-    expect(frame.detach).toBeGreaterThan(0)
-    expect(frame.detach).toBeLessThan(1)
-    expect(frame.turn).toBe(0)
-    featureFrame(0.01, 'medium', frame, true)
-    expect(frame.detach).toBe(0)
-    featureFrame(0.99, 'medium', frame, true)
-    expect(frame.detach).toBe(0)
-    // Continuity: fine sampling never jumps.
-    let prev = -1
-    for (let i = 0; i <= 100; i++) {
-      featureFrame(i / 100, 'light', frame, true)
-      if (prev >= 0) {
-        expect(Math.abs(frame.detach - prev)).toBeLessThan(0.1)
+  it('travels continuously with separation, no jumps (round 01 A7)', () => {
+    // No tumble, no overshoot, no binary teleport: every layer moves
+    // continuously with sep so scrubbing stays exact in both directions.
+    for (let i = 0; i < 10; i++) {
+      let prev = -1
+      for (let s = 0; s <= 100; s++) {
+        const v = peelLocal(s / 100, i)
+        expect(v).toBeGreaterThanOrEqual(0)
+        expect(v).toBeLessThanOrEqual(1)
+        if (prev >= 0) expect(Math.abs(v - prev)).toBeLessThan(0.05)
+        prev = v
       }
-      prev = frame.detach
     }
   })
 
